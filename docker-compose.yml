@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: slflow-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-slflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-slflow}
+      POSTGRES_DB: ${POSTGRES_DB:-slflow}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-slflow} -d ${POSTGRES_DB:-slflow}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "${DB_PORT:-5432}:5432"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: slflow-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-slflow}:${POSTGRES_PASSWORD:-slflow}@db:5432/${POSTGRES_DB:-slflow}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production-please-use-a-long-random-string}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      DEFAULT_ADMIN_USERNAME: ${DEFAULT_ADMIN_USERNAME:-admin}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-admin}
+      UPLOAD_DIR: /app/uploads
+      APP_VERSION_FILE: /app/VERSION
+      GIT_REPO_PATH: /workspace
+      ENABLE_HOT_RELOAD: ${ENABLE_HOT_RELOAD:-true}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+    volumes:
+      - uploads:/app/uploads
+      # Mount the host project root to allow git pull / docker rebuild from inside.
+      # Hot-reload feature uses this volume to access git history & trigger rebuild.
+      - ./:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: ${VITE_API_BASE:-/api}
+    container_name: slflow-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+
+volumes:
+  db_data:
+  uploads:

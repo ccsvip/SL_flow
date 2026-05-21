@@ -1,0 +1,264 @@
+:root {
+  --accent: #1677ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family:
+    "Inter", "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei",
+    -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(125, 125, 140, 0.35);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(125, 125, 140, 0.55);
+}
+
+/* Login page background */
+.slf-login-bg {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(22, 119, 255, 0.25), transparent 45%),
+    radial-gradient(circle at 80% 30%, rgba(114, 46, 209, 0.3), transparent 45%),
+    radial-gradient(circle at 50% 100%, rgba(19, 194, 194, 0.18), transparent 50%),
+    linear-gradient(135deg, #0c1424 0%, #16213a 60%, #0c1424 100%);
+  overflow: hidden;
+}
+.slf-login-bg::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><path d='M0 80 L80 0 M-20 20 L20 -20 M60 100 L100 60' stroke='rgba(255,255,255,0.04)' stroke-width='1'/></svg>");
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.slf-login-card {
+  width: min(420px, 92vw);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  border-radius: 18px;
+  padding: 36px 32px 28px;
+  box-shadow:
+    0 16px 50px rgba(0, 0, 0, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.5) inset;
+  position: relative;
+  z-index: 1;
+}
+
+[data-theme="dark"] .slf-login-card {
+  background: rgba(20, 24, 32, 0.78);
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 16px 50px rgba(0, 0, 0, 0.6),
+    0 1px 0 rgba(255, 255, 255, 0.06) inset;
+}
+
+.slf-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 0.5px;
+}
+.slf-brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--accent), #722ed1);
+  display: grid;
+  place-items: center;
+  color: white;
+  font-weight: 800;
+  box-shadow: 0 6px 16px rgba(22, 119, 255, 0.35);
+}
+
+/* Sidebar adjustments */
+.slf-sider .ant-menu-item,
+.slf-sider .ant-menu-submenu-title {
+  border-radius: 10px;
+  margin: 4px 8px;
+  width: calc(100% - 16px);
+}
+.slf-sider .ant-menu-item-selected {
+  background: linear-gradient(90deg, rgba(22, 119, 255, 0.25), rgba(114, 46, 209, 0.15)) !important;
+}
+
+/* Stat card */
+.slf-stat-card {
+  border-radius: 14px;
+  padding: 18px 20px;
+  background: var(--card-bg, #ffffff);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--card-border, rgba(0, 0, 0, 0.06));
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.slf-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+.slf-stat-card .slf-stat-glow {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.7;
+}
+
+[data-theme="dark"] .slf-stat-card {
+  --card-bg: #161c25;
+  --card-border: rgba(255, 255, 255, 0.07);
+}
+
+/* Card grid utilities */
+.slf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+/* Kanban column */
+.slf-kanban-col {
+  background: rgba(125, 125, 140, 0.08);
+  border-radius: 14px;
+  padding: 12px;
+  min-width: 280px;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.slf-kanban-card {
+  background: var(--card-bg, #fff);
+  border-radius: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--card-border, rgba(0, 0, 0, 0.06));
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.slf-kanban-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+}
+
+/* Attachment preview tile */
+.slf-att-tile {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(125, 125, 140, 0.25);
+  cursor: pointer;
+  background: rgba(125, 125, 140, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.slf-att-tile img,
+.slf-att-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.slf-att-tile .slf-att-rm {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: white;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.slf-att-tile:hover .slf-att-rm {
+  opacity: 1;
+}
+.slf-att-tile .slf-att-badge {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* App header glass */
+.slf-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--header-bg, rgba(255, 255, 255, 0.85));
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  border-bottom: 1px solid rgba(125, 125, 140, 0.15);
+}
+[data-theme="dark"] .slf-header {
+  --header-bg: rgba(17, 22, 30, 0.78);
+}
+
+.slf-page {
+  padding: 18px 24px 24px;
+}
+.slf-page-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+/* Empty avatar */
+.slf-avatar-fallback {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #722ed1);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  align-items: center;
+  justify-content: center;
+}

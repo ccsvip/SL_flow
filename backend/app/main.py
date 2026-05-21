@@ -1,0 +1,71 @@
+from __future__ import annotations
+
+import logging
+
+from fastapi import APIRouter, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from app.api.routes import (
+    attachments,
+    auth,
+    bugs,
+    comments,
+    dashboard,
+    projects,
+    stories,
+    system,
+    tasks,
+    users,
+)
+from app.core.config import settings
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s :: %(message)s")
+logger = logging.getLogger("slflow")
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(
+        title="SL Flow API",
+        description="ZenTao-inspired project & task management.",
+        version="0.1.0",
+        docs_url="/api/docs",
+        redoc_url="/api/redoc",
+        openapi_url="/api/openapi.json",
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.CORS_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    api = APIRouter(prefix="/api")
+    api.include_router(auth.router)
+    api.include_router(users.router)
+    api.include_router(projects.router)
+    api.include_router(stories.router)
+    api.include_router(tasks.router)
+    api.include_router(bugs.router)
+    api.include_router(comments.router)
+    api.include_router(attachments.router)
+    api.include_router(dashboard.router)
+    api.include_router(system.router)
+
+    @api.get("/healthz")
+    async def healthz() -> dict[str, str]:
+        return {"status": "ok"}
+
+    app.include_router(api)
+
+    @app.exception_handler(Exception)
+    async def unhandled(request, exc):  # pragma: no cover
+        logger.exception("unhandled exception")
+        return JSONResponse(status_code=500, content={"detail": "internal server error"})
+
+    return app
+
+
+app = create_app()
