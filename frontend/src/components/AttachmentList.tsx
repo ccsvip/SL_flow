@@ -259,10 +259,20 @@ export default function AttachmentList({
             multiple
             accept="image/*,video/*"
             showUploadList={false}
-            beforeUpload={() => false}
-            onChange={(info) => {
-              const files = info.fileList.map((f) => f.originFileObj as File).filter(Boolean);
-              if (files.length > 0) handlePickFiles(files);
+            // We do NOT use onChange here. AntD's onChange fires once PER FILE
+            // with a cumulative fileList, so handling N selected files would
+            // upload f1, then [f1,f2], then [f1,f2,f3] — duplicating uploads
+            // and sometimes dropping files due to React state batching races.
+            //
+            // Instead, beforeUpload's second argument is the entire batch
+            // selected in a single dialog. We process the whole batch once
+            // (when invoked for the first file) and return false so AntD
+            // never auto-uploads via its own request mechanism.
+            beforeUpload={(file, fileList) => {
+              if (file === fileList[0]) {
+                handlePickFiles(fileList as unknown as File[]);
+              }
+              return false;
             }}
           >
             <div
