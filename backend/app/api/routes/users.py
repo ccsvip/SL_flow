@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.api.deps import AdminUser, CurrentUser, DBSession
+from app.core.audit import record_audit
 from app.core.security import hash_password
+from app.models.audit_log import AuditAction, AuditTargetType
 from app.models.user import User, UserRole
 from app.schemas.user import UserCreate, UserOut, UserUpdate
 
@@ -25,7 +27,9 @@ async def list_users(db: DBSession, _: CurrentUser) -> list[UserOut]:
 
 
 @router.post("", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-async def create_user(payload: UserCreate, db: DBSession, _: AdminUser) -> UserOut:
+async def create_user(
+    payload: UserCreate, db: DBSession, admin: AdminUser, request: Request
+) -> UserOut:
     existing = (
         await db.execute(select(User).where(User.username == payload.username))
     ).scalar_one_or_none()
@@ -42,12 +46,26 @@ async def create_user(payload: UserCreate, db: DBSession, _: AdminUser) -> UserO
     db.add(user)
     await db.commit()
     await db.refresh(user)
+    await record_audit(
+        db,
+        actor=admin,
+        action=AuditAction.create,
+        target_type=AuditTargetType.user,
+        target_id=user.id,
+        target_label=f"{user.username} ({user.role.value})",
+        request=request,
+        status_code=201,
+    )
     return UserOut.model_validate(user)
 
 
 @router.patch("/{user_id}", response_model=UserOut)
 async def update_user(
-    user_id: int, payload: UserUpdate, db: DBSession, admin: AdminUser
+    user_id: int,
+    payload: UserUpdate,
+    db: DBSession,
+    admin: AdminUser,
+    request: Request,
 ) -> UserOut:
     user = await db.get(User, user_id)
     if not user:
@@ -63,6 +81,17 @@ async def update_user(
         setattr(user, k, v)
     await db.commit()
     await db.refresh(user)
+    await record_audit(
+        db,
+        actor=admin,
+        action=AuditAction.update,
+        target_type=AuditTargetType.user,
+        target_id=user.id,
+        target_label=user.username,
+        request=request,
+        status_code=200,
+        extra={"changed": list(data.keys())},
+    )
     return UserOut.model_validate(user)
 
 
@@ -72,7 +101,9 @@ async def update_user(
     response_class=Response,
     response_model=None,
 )
-async def delete_user(user_id: int, db: DBSession, admin: AdminUser):
+async def delete_user(
+    user_id: int, db: DBSession, admin: AdminUser, request: Request
+):
     user = await db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -81,6 +112,16 @@ async def delete_user(user_id: int, db: DBSession, admin: AdminUser):
     # Soft-delete by deactivation to preserve referential integrity (creators of stories etc.)
     user.is_active = False
     await db.commit()
+    await record_audit(
+        db,
+        actor=admin,
+        action=AuditAction.delete,
+        target_type=AuditTargetType.user,
+        target_id=user.id,
+        target_label=f"{user.username} (deactivated)",
+        request=request,
+        status_code=204,
+    )
 
 
 @router.post(
@@ -93,10 +134,21 @@ async def reset_password(
     user_id: int,
     payload: ResetPasswordIn,
     db: DBSession,
-    _: AdminUser,
+    admin: AdminUser,
+    request: Request,
 ):
     user = await db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     user.hashed_password = hash_password(payload.new_password)
     await db.commit()
+    await record_audit(
+        db,
+        actor=admin,
+        action=AuditAction.password_change,
+        target_type=AuditTargetType.user,
+        target_id=user.id,
+        target_label=f"reset-password for {user.username}",
+        request=request,
+        status_code=204,
+    )

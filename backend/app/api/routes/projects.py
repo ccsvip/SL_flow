@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from sqlalchemy import func, select
 
 from app.api.deps import CurrentUser, DBSession
+from app.core.audit import record_audit
 from app.models import Bug, Project, Story, Task
+from app.models.audit_log import AuditAction, AuditTargetType
 from app.schemas.project import ProjectCreate, ProjectOut, ProjectUpdate
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -57,7 +59,7 @@ async def get_project(project_id: int, db: DBSession, _: CurrentUser) -> Project
 
 @router.post("", response_model=ProjectOut, status_code=status.HTTP_201_CREATED)
 async def create_project(
-    payload: ProjectCreate, db: DBSession, user: CurrentUser
+    payload: ProjectCreate, db: DBSession, user: CurrentUser, request: Request
 ) -> ProjectOut:
     existing = (
         await db.execute(select(Project).where(Project.code == payload.code))
@@ -68,20 +70,46 @@ async def create_project(
     db.add(project)
     await db.commit()
     await db.refresh(project)
+    await record_audit(
+        db,
+        actor=user,
+        action=AuditAction.create,
+        target_type=AuditTargetType.project,
+        target_id=project.id,
+        target_label=f"{project.code} {project.name}",
+        request=request,
+        status_code=201,
+    )
     return await _decorate(db, project)
 
 
 @router.patch("/{project_id}", response_model=ProjectOut)
 async def update_project(
-    project_id: int, payload: ProjectUpdate, db: DBSession, _: CurrentUser
+    project_id: int,
+    payload: ProjectUpdate,
+    db: DBSession,
+    user: CurrentUser,
+    request: Request,
 ) -> ProjectOut:
     project = await db.get(Project, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+    changed = list(payload.model_dump(exclude_unset=True).keys())
     for k, v in payload.model_dump(exclude_unset=True).items():
         setattr(project, k, v)
     await db.commit()
     await db.refresh(project)
+    await record_audit(
+        db,
+        actor=user,
+        action=AuditAction.update,
+        target_type=AuditTargetType.project,
+        target_id=project.id,
+        target_label=f"{project.code} {project.name}",
+        request=request,
+        status_code=200,
+        extra={"changed": changed},
+    )
     return await _decorate(db, project)
 
 
@@ -91,7 +119,9 @@ async def update_project(
     response_class=Response,
     response_model=None,
 )
-async def delete_project(project_id: int, db: DBSession, user: CurrentUser):
+async def delete_project(
+    project_id: int, db: DBSession, user: CurrentUser, request: Request
+):
     project = await db.get(Project, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -102,5 +132,17 @@ async def delete_project(project_id: int, db: DBSession, user: CurrentUser):
             status_code=403,
             detail="Only the project owner or admin may delete this project",
         )
+    label = f"{project.code} {project.name}"
+    pid = project.id
     await db.delete(project)
     await db.commit()
+    await record_audit(
+        db,
+        actor=user,
+        action=AuditAction.delete,
+        target_type=AuditTargetType.project,
+        target_id=pid,
+        target_label=label,
+        request=request,
+        status_code=204,
+    )

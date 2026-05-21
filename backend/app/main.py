@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes import (
     attachments,
+    audit_logs,
     auth,
     bugs,
     comments,
@@ -53,6 +54,7 @@ def create_app() -> FastAPI:
     api.include_router(attachments.router)
     api.include_router(dashboard.router)
     api.include_router(system.router)
+    api.include_router(audit_logs.router)
 
     @api.get("/healthz")
     async def healthz() -> dict[str, str]:

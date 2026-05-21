@@ -5,6 +5,7 @@ from app.models.task import Task, TaskStatus, TaskPriority
 from app.models.bug import Bug, BugStatus, BugSeverity, BugPriority
 from app.models.comment import Comment
 from app.models.attachment import Attachment, AttachmentTarget
+from app.models.audit_log import AuditLog, AuditAction, AuditTargetType
 
 __all__ = [
     "User",
@@ -24,4 +25,7 @@ __all__ = [
     "Comment",
     "Attachment",
     "AttachmentTarget",
+    "AuditLog",
+    "AuditAction",
+    "AuditTargetType",
 ]

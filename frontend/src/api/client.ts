@@ -2,6 +2,8 @@ import { http } from "./http";
 import type {
   Attachment,
   AttachmentTargetType,
+  AuditLogPage,
+  AuditLogQuery,
   Bug,
   Comment,
   CommentTargetType,
@@ -125,4 +127,10 @@ export const system = {
       .post<{ status: string; message: string }>("/system/apply-update")
       .then((r) => r.data),
   updateLog: () => http.get<{ log: string }>("/system/update-log").then((r) => r.data),
+};
+
+// --- Audit logs ----------------------------------------------------------
+export const auditLogs = {
+  list: (params?: AuditLogQuery) =>
+    http.get<AuditLogPage>("/audit-logs", { params }).then((r) => r.data),
 };

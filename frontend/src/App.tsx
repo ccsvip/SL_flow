@@ -14,6 +14,7 @@ import BugsPage from "@/pages/BugsPage";
 import UsersPage from "@/pages/UsersPage";
 import SettingsPage from "@/pages/SettingsPage";
 import SystemPage from "@/pages/SystemPage";
+import AuditLogsPage from "@/pages/AuditLogsPage";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { token, hydrated } = useAuthStore();
@@ -72,6 +73,7 @@ export default function App() {
         />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="system" element={<SystemPage />} />
+        <Route path="audit-logs" element={<AuditLogsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

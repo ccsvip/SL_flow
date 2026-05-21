@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DBSession
+from app.core.audit import record_audit
+from app.models.audit_log import AuditAction, AuditTargetType
 from app.models.task import Task
 from app.schemas.task import TaskCreate, TaskOut, TaskUpdate
 
@@ -44,25 +46,53 @@ async def get_task(task_id: int, db: DBSession, _: CurrentUser) -> TaskOut:
 
 
 @router.post("", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
-async def create_task(payload: TaskCreate, db: DBSession, user: CurrentUser) -> TaskOut:
+async def create_task(
+    payload: TaskCreate, db: DBSession, user: CurrentUser, request: Request
+) -> TaskOut:
     t = Task(**payload.model_dump(), creator_id=user.id)
     db.add(t)
     await db.commit()
     await db.refresh(t)
+    await record_audit(
+        db,
+        actor=user,
+        action=AuditAction.create,
+        target_type=AuditTargetType.task,
+        target_id=t.id,
+        target_label=t.title,
+        request=request,
+        status_code=201,
+    )
     return TaskOut.model_validate(t)
 
 
 @router.patch("/{task_id}", response_model=TaskOut)
 async def update_task(
-    task_id: int, payload: TaskUpdate, db: DBSession, _: CurrentUser
+    task_id: int,
+    payload: TaskUpdate,
+    db: DBSession,
+    user: CurrentUser,
+    request: Request,
 ) -> TaskOut:
     t = await db.get(Task, task_id)
     if not t:
         raise HTTPException(status_code=404, detail="Task not found")
+    changed = list(payload.model_dump(exclude_unset=True).keys())
     for k, v in payload.model_dump(exclude_unset=True).items():
         setattr(t, k, v)
     await db.commit()
     await db.refresh(t)
+    await record_audit(
+        db,
+        actor=user,
+        action=AuditAction.update,
+        target_type=AuditTargetType.task,
+        target_id=t.id,
+        target_label=t.title,
+        request=request,
+        status_code=200,
+        extra={"changed": changed},
+    )
     return TaskOut.model_validate(t)
 
 
@@ -72,7 +102,9 @@ async def update_task(
     response_class=Response,
     response_model=None,
 )
-async def delete_task(task_id: int, db: DBSession, user: CurrentUser):
+async def delete_task(
+    task_id: int, db: DBSession, user: CurrentUser, request: Request
+):
     t = await db.get(Task, task_id)
     if not t:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -80,5 +112,17 @@ async def delete_task(task_id: int, db: DBSession, user: CurrentUser):
         raise HTTPException(
             status_code=403, detail="Only the creator or admin may delete this task"
         )
+    tid = t.id
+    label = t.title
     await db.delete(t)
     await db.commit()
+    await record_audit(
+        db,
+        actor=user,
+        action=AuditAction.delete,
+        target_type=AuditTargetType.task,
+        target_id=tid,
+        target_label=label,
+        request=request,
+        status_code=204,
+    )

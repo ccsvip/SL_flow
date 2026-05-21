@@ -6,13 +6,15 @@ from pathlib import Path
 from typing import List
 
 import aiofiles
-from fastapi import APIRouter, File, HTTPException, Query, Response, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Query, Request, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DBSession
+from app.core.audit import record_audit
 from app.core.config import settings
 from app.models.attachment import Attachment, AttachmentTarget
+from app.models.audit_log import AuditAction, AuditTargetType
 from app.schemas.attachment import AttachmentOut
 
 router = APIRouter(prefix="/attachments", tags=["attachments"])
@@ -75,6 +77,7 @@ async def list_attachments(
 async def upload_attachments(
     db: DBSession,
     user: CurrentUser,
+    request: Request,
     target_type: AttachmentTarget = Query(...),
     target_id: int = Query(..., gt=0),
     files: list[UploadFile] = File(...),
@@ -130,6 +133,20 @@ async def upload_attachments(
         out.append(_decorate(att))
 
     await db.commit()
+
+    # One audit row per uploaded file - users want to see "who uploaded what"
+    # not "who fired one bulk-upload call".
+    for o in out:
+        await record_audit(
+            db,
+            actor=user,
+            action=AuditAction.create,
+            target_type=AuditTargetType.attachment,
+            target_id=o.id,
+            target_label=f"on {target_type.value}#{target_id}: {o.filename}",
+            request=request,
+            status_code=201,
+        )
     return out
 
 
@@ -168,13 +185,15 @@ async def download_attachment(attachment_id: int, db: DBSession, _: CurrentUser)
     response_model=None,
 )
 async def delete_attachment(
-    attachment_id: int, db: DBSession, user: CurrentUser
+    attachment_id: int, db: DBSession, user: CurrentUser, request: Request
 ):
     att = await db.get(Attachment, attachment_id)
     if not att:
         raise HTTPException(status_code=404, detail="Attachment not found")
     if att.uploader_id != user.id and user.role.value != "admin":
         raise HTTPException(status_code=403, detail="Only uploader or admin may delete")
+    aid = att.id
+    label = f"on {att.target_type.value}#{att.target_id}: {att.filename}"
     full = settings.upload_path / att.storage_path
     try:
         if full.is_file():
@@ -184,3 +203,13 @@ async def delete_attachment(
         pass
     await db.delete(att)
     await db.commit()
+    await record_audit(
+        db,
+        actor=user,
+        action=AuditAction.delete,
+        target_type=AuditTargetType.attachment,
+        target_id=aid,
+        target_label=label,
+        request=request,
+        status_code=204,
+    )

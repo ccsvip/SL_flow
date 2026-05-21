@@ -178,3 +178,61 @@ export interface UpdateInfo {
   incoming_commits?: string[];
   reason?: string;
 }
+
+export type AuditAction =
+  | "create"
+  | "update"
+  | "delete"
+  | "login"
+  | "login_failed"
+  | "logout"
+  | "password_change";
+
+export type AuditTargetType =
+  | "project"
+  | "story"
+  | "task"
+  | "bug"
+  | "comment"
+  | "attachment"
+  | "user"
+  | "auth";
+
+export interface AuditActor {
+  id: number;
+  username: string;
+}
+
+export interface AuditLog {
+  id: number;
+  actor: AuditActor | null;
+  actor_username_at_event: string | null;
+  action: AuditAction;
+  target_type: AuditTargetType;
+  target_id: number | null;
+  target_label: string | null;
+  request_method: string | null;
+  request_path: string | null;
+  status_code: number | null;
+  client_ip: string | null;
+  extra: string | null;
+  created_at: string;
+}
+
+export interface AuditLogPage {
+  items: AuditLog[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface AuditLogQuery {
+  action?: AuditAction;
+  target_type?: AuditTargetType;
+  actor_id?: number;
+  q?: string;
+  start?: string;
+  end?: string;
+  page?: number;
+  page_size?: number;
+}

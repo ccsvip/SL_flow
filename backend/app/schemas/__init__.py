@@ -13,6 +13,7 @@ from app.schemas.task import TaskOut, TaskCreate, TaskUpdate
 from app.schemas.bug import BugOut, BugCreate, BugUpdate
 from app.schemas.comment import CommentOut, CommentCreate
 from app.schemas.attachment import AttachmentOut
+from app.schemas.audit_log import AuditLogOut, AuditLogPage
 from app.schemas.common import PaginatedResponse, IdList
 
 __all__ = [
@@ -24,5 +25,6 @@ __all__ = [
     "BugOut", "BugCreate", "BugUpdate",
     "CommentOut", "CommentCreate",
     "AttachmentOut",
+    "AuditLogOut", "AuditLogPage",
     "PaginatedResponse", "IdList",
 ]

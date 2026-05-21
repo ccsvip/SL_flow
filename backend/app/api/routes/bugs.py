@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DBSession
+from app.core.audit import record_audit
+from app.models.audit_log import AuditAction, AuditTargetType
 from app.models.bug import Bug
 from app.schemas.bug import BugCreate, BugOut, BugUpdate
 
@@ -44,23 +46,53 @@ async def get_bug(bug_id: int, db: DBSession, _: CurrentUser) -> BugOut:
 
 
 @router.post("", response_model=BugOut, status_code=status.HTTP_201_CREATED)
-async def create_bug(payload: BugCreate, db: DBSession, user: CurrentUser) -> BugOut:
+async def create_bug(
+    payload: BugCreate, db: DBSession, user: CurrentUser, request: Request
+) -> BugOut:
     b = Bug(**payload.model_dump(), creator_id=user.id)
     db.add(b)
     await db.commit()
     await db.refresh(b)
+    await record_audit(
+        db,
+        actor=user,
+        action=AuditAction.create,
+        target_type=AuditTargetType.bug,
+        target_id=b.id,
+        target_label=b.title,
+        request=request,
+        status_code=201,
+    )
     return BugOut.model_validate(b)
 
 
 @router.patch("/{bug_id}", response_model=BugOut)
-async def update_bug(bug_id: int, payload: BugUpdate, db: DBSession, _: CurrentUser) -> BugOut:
+async def update_bug(
+    bug_id: int,
+    payload: BugUpdate,
+    db: DBSession,
+    user: CurrentUser,
+    request: Request,
+) -> BugOut:
     b = await db.get(Bug, bug_id)
     if not b:
         raise HTTPException(status_code=404, detail="Bug not found")
+    changed = list(payload.model_dump(exclude_unset=True).keys())
     for k, v in payload.model_dump(exclude_unset=True).items():
         setattr(b, k, v)
     await db.commit()
     await db.refresh(b)
+    await record_audit(
+        db,
+        actor=user,
+        action=AuditAction.update,
+        target_type=AuditTargetType.bug,
+        target_id=b.id,
+        target_label=b.title,
+        request=request,
+        status_code=200,
+        extra={"changed": changed},
+    )
     return BugOut.model_validate(b)
 
 
@@ -70,7 +102,9 @@ async def update_bug(bug_id: int, payload: BugUpdate, db: DBSession, _: CurrentU
     response_class=Response,
     response_model=None,
 )
-async def delete_bug(bug_id: int, db: DBSession, user: CurrentUser):
+async def delete_bug(
+    bug_id: int, db: DBSession, user: CurrentUser, request: Request
+):
     b = await db.get(Bug, bug_id)
     if not b:
         raise HTTPException(status_code=404, detail="Bug not found")
@@ -78,5 +112,17 @@ async def delete_bug(bug_id: int, db: DBSession, user: CurrentUser):
         raise HTTPException(
             status_code=403, detail="Only the creator or admin may delete this bug"
         )
+    bid = b.id
+    label = b.title
     await db.delete(b)
     await db.commit()
+    await record_audit(
+        db,
+        actor=user,
+        action=AuditAction.delete,
+        target_type=AuditTargetType.bug,
+        target_id=bid,
+        target_label=label,
+        request=request,
+        status_code=204,
+    )
