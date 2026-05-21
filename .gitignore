@@ -23,3 +23,7 @@ dist/
 backend/uploads/
 backend/.alembic_initialized
 .omo/
+
+# Hot-update artifacts (sibling container drops these in the workspace root)
+.last_update.log
+.update.lock

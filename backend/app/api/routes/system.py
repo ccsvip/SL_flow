@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 import shlex
+import time
 from pathlib import Path
 from typing import Any
 
@@ -203,31 +204,57 @@ async def _do_pull_and_rebuild() -> None:
         container (the host daemon resolves paths in the host filesystem).
       - Pass COMPOSE_PROJECT_NAME so the sibling's `docker compose up`
         targets the same stack instead of a parallel "workspace" one.
+      - Write logs to a path BOTH the backend AND the sibling can see -
+        i.e. inside the workspace bind-mount, not /app/uploads (which is
+        only visible to the backend).
     """
     repo = settings.GIT_REPO_PATH
-    log_path = Path(settings.UPLOAD_DIR) / ".last_update.log"
-    lock_path = Path(settings.UPLOAD_DIR) / ".update.lock"
-    log_path.parent.mkdir(parents=True, exist_ok=True)
+    # Logs and lock both live inside the workspace so the sibling can
+    # append to the same file the backend reads. Without this, the
+    # /api/system/update-log endpoint would never see anything past the
+    # `[spawn]` line (the sibling's writes would land on the workspace
+    # volume only, while the route reads from /app/uploads).
+    log_path = Path(repo) / ".last_update.log"
+    lock_path = Path(repo) / ".update.lock"
 
     def _log(msg: str) -> None:
-        with log_path.open("a", encoding="utf-8") as fp:
-            fp.write(msg + "\n")
-
-    # Lock so two admins clicking "apply-update" within seconds don't
-    # collide. Stale locks (older than 15 min) are reclaimed.
-    if lock_path.exists():
         try:
-            age = asyncio.get_event_loop().time() - lock_path.stat().st_mtime
+            with log_path.open("a", encoding="utf-8") as fp:
+                fp.write(msg + "\n")
         except OSError:
-            age = 0
-        if age < 900:
-            _log("[abort] another update is already in progress")
-            return
-        lock_path.unlink(missing_ok=True)
-    lock_path.write_text(str(asyncio.get_event_loop().time()))
+            pass  # log is best-effort
 
+    # Atomic lock acquisition via O_CREAT|O_EXCL. Two concurrent admins
+    # clicking "apply-update" race here; only one wins. The loser exits
+    # quietly. Stale locks (>15 min old) are reclaimed in the same call.
+    locked = False
     try:
-        _log(f"=== update started at {asyncio.get_event_loop().time()} ===")
+        try:
+            fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+            os.close(fd)
+            locked = True
+        except FileExistsError:
+            # Reclaim if stale.
+            try:
+                age = time.time() - lock_path.stat().st_mtime
+            except OSError:
+                age = 0
+            if age > 900:
+                try:
+                    lock_path.unlink()
+                    fd = os.open(
+                        str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644
+                    )
+                    os.close(fd)
+                    locked = True
+                except (FileExistsError, OSError):
+                    _log("[abort] could not reclaim stale lock")
+                    return
+            else:
+                _log("[abort] another update is already in progress")
+                return
+
+        _log(f"=== update started at {time.strftime('%Y-%m-%dT%H:%M:%S%z')} ===")
 
         # 1. git pull (synchronous, fast).
         rc, out, err = await _run(["git", "pull", "--ff-only"], cwd=repo, timeout=180)
@@ -261,6 +288,9 @@ async def _do_pull_and_rebuild() -> None:
             "docker compose up -d --build >> /workspace/.last_update.log 2>&1; "
             "rc=$?; "
             "echo \"[updater] docker compose up exit=$rc at $(date -Iseconds)\" >> /workspace/.last_update.log; "
+            # Best-effort: clean up the lock file the spawner left behind so
+            # the next update can proceed once we're done.
+            "rm -f /workspace/.update.lock; "
             "exit $rc"
         )
         sibling_cmd = [
@@ -291,10 +321,17 @@ async def _do_pull_and_rebuild() -> None:
         _log(f"[spawn] docker run rc={rc} sibling_id={out.strip()[:12]}\n{err}")
         if rc != 0:
             _log("[abort] failed to spawn updater sibling")
+            return
+
+        # On success we deliberately leave the lock file in place; the
+        # sibling removes it as its last step. If our backend container
+        # is recreated before that, the sibling still gets to clean up.
+        # `locked` stays True so the `finally` below does NOT remove it -
+        # the sibling owns it from now on.
+        locked = False  # transferred ownership
     finally:
-        # The sibling lives past us; remove the lock so future updates can
-        # proceed once the new backend boots.
-        lock_path.unlink(missing_ok=True)
+        if locked:
+            lock_path.unlink(missing_ok=True)
 
 
 @router.post("/apply-update", status_code=status.HTTP_202_ACCEPTED)
@@ -316,7 +353,9 @@ async def apply_update(_: AdminUser, bg: BackgroundTasks) -> dict[str, Any]:
 
 @router.get("/update-log")
 async def update_log(_: AdminUser) -> dict[str, str]:
-    log_path = Path(settings.UPLOAD_DIR) / ".last_update.log"
+    # Read from the workspace location so we can see the SIBLING's writes
+    # (the sibling only mounts the workspace, not /app/uploads).
+    log_path = Path(settings.GIT_REPO_PATH) / ".last_update.log"
     if not log_path.is_file():
         return {"log": ""}
     return {"log": log_path.read_text(encoding="utf-8", errors="ignore")[-8000:]}
