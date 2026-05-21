@@ -87,9 +87,6 @@ export default function LoginPage() {
               登 录
             </Button>
           </Form>
-          <Typography.Paragraph type="secondary" style={{ marginTop: 18, fontSize: 12, textAlign: "center" }}>
-            © {new Date().getFullYear()} SL Flow · 使用 FastAPI + React 18 构建
-          </Typography.Paragraph>
         </div>
       </div>
     </div>
