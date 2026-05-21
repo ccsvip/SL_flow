@@ -236,3 +236,52 @@ export interface AuditLogQuery {
   page?: number;
   page_size?: number;
 }
+
+// Database backups -----------------------------------------------------------
+
+export type BackupKind = "manual" | "scheduled" | "pre_restore";
+export type BackupStatus = "success" | "failed" | "running";
+
+export interface DBBackup {
+  id: number;
+  filename: string;
+  size_bytes: number;
+  sha256: string | null;
+  kind: BackupKind;
+  status: BackupStatus;
+  note: string | null;
+  error: string | null;
+  creator: User | null;
+  creator_username_at_event: string | null;
+  created_at: string;
+}
+
+export interface DBBackupPage {
+  items: DBBackup[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface BackupSetting {
+  enabled: boolean;
+  interval_hours: number;
+  keep_count: number;
+  last_run_at: string | null;
+  last_run_status: string | null;
+  last_run_error: string | null;
+  next_run_at: string | null;
+  updated_at: string;
+}
+
+export interface BackupSettingUpdate {
+  enabled?: boolean;
+  interval_hours?: number;
+  keep_count?: number;
+}
+
+export interface RestoreResult {
+  status: string;
+  message: string;
+  pre_restore_backup_id: number | null;
+}

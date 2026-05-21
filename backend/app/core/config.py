@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     # Storage
     UPLOAD_DIR: str = "/app/uploads"
     MAX_UPLOAD_BYTES: int = 200 * 1024 * 1024  # 200 MB per file
+    BACKUP_DIR: str = "/app/backups"
+    MAX_BACKUP_UPLOAD_BYTES: int = 1024 * 1024 * 1024  # 1 GB per restore upload
 
     # Hot-update
     APP_VERSION_FILE: str = "/app/VERSION"
@@ -50,6 +52,12 @@ class Settings(BaseSettings):
     @property
     def upload_path(self) -> Path:
         p = Path(self.UPLOAD_DIR)
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+
+    @property
+    def backup_path(self) -> Path:
+        p = Path(self.BACKUP_DIR)
         p.mkdir(parents=True, exist_ok=True)
         return p
 

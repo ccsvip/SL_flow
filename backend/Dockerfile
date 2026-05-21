@@ -5,13 +5,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# System deps: postgres client, ffmpeg-light for video probes, git for hot update,
-# docker CLI for triggering rebuild from inside the container.
+# System deps: postgres client (pg_dump/pg_restore for backups), git for
+# hot update, docker CLI for triggering rebuild from inside the container.
 RUN set -eux; \
     for i in 1 2 3; do \
         apt-get update && apt-get install -y --no-install-recommends \
             build-essential \
             libpq-dev \
+            postgresql-client \
             curl \
             git \
             ca-certificates \

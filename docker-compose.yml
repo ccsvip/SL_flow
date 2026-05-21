@@ -33,6 +33,7 @@ services:
       DEFAULT_ADMIN_USERNAME: ${DEFAULT_ADMIN_USERNAME:-admin}
       DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-admin}
       UPLOAD_DIR: /app/uploads
+      BACKUP_DIR: /app/backups
       APP_VERSION_FILE: /workspace/VERSION
       GIT_REPO_PATH: /workspace
       ENABLE_HOT_RELOAD: ${ENABLE_HOT_RELOAD:-true}
@@ -48,6 +49,7 @@ services:
       COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-slflow}
     volumes:
       - uploads:/app/uploads
+      - backups:/app/backups
       # Mount the host project root to allow git pull / docker rebuild from inside.
       # Hot-reload feature uses this volume to access git history & trigger rebuild.
       - ./:/workspace
@@ -71,3 +73,4 @@ services:
 volumes:
   db_data:
   uploads:
+  backups:

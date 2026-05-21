@@ -29,6 +29,8 @@ class AuditTargetType(str, enum.Enum):
     attachment = "attachment"
     user = "user"
     auth = "auth"
+    db_backup = "db_backup"
+    backup_setting = "backup_setting"
 
 
 class AuditLog(Base):

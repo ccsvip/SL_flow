@@ -2,6 +2,7 @@ import React from "react";
 import { Layout, Menu } from "antd";
 import {
   DashboardOutlined,
+  DatabaseOutlined,
   ProjectOutlined,
   FileTextOutlined,
   CheckSquareOutlined,
@@ -38,6 +39,8 @@ export default function AppSider() {
     if (role === "admin") {
       // Insert user management before audit logs.
       base.splice(5, 0, { key: "/users", icon: <TeamOutlined />, label: "用户管理" });
+      // Insert backup management between user mgmt and audit logs.
+      base.splice(6, 0, { key: "/backups", icon: <DatabaseOutlined />, label: "数据备份" });
     }
     return base;
   }, [role]);

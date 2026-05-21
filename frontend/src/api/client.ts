@@ -4,11 +4,16 @@ import type {
   AttachmentTargetType,
   AuditLogPage,
   AuditLogQuery,
+  BackupSetting,
+  BackupSettingUpdate,
   Bug,
   Comment,
   CommentTargetType,
   DashboardOverview,
+  DBBackup,
+  DBBackupPage,
   Project,
+  RestoreResult,
   Story,
   SystemVersion,
   Task,
@@ -133,4 +138,31 @@ export const system = {
 export const auditLogs = {
   list: (params?: AuditLogQuery) =>
     http.get<AuditLogPage>("/audit-logs", { params }).then((r) => r.data),
+};
+
+// --- DB Backups ----------------------------------------------------------
+export const dbBackups = {
+  list: (page = 1, page_size = 50) =>
+    http
+      .get<DBBackupPage>("/db-backups", { params: { page, page_size } })
+      .then((r) => r.data),
+  create: (note?: string) =>
+    http.post<DBBackup>("/db-backups", { note }).then((r) => r.data),
+  remove: (id: number) => http.delete(`/db-backups/${id}`).then(() => true),
+  restore: (id: number) =>
+    http.post<RestoreResult>(`/db-backups/${id}/restore`).then((r) => r.data),
+  upload: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file, file.name);
+    return http
+      .post<DBBackup>("/db-backups/upload", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then((r) => r.data);
+  },
+  // settings sit under /db-backups/settings (admin only)
+  getSettings: () =>
+    http.get<BackupSetting>("/db-backups/settings").then((r) => r.data),
+  updateSettings: (data: BackupSettingUpdate) =>
+    http.patch<BackupSetting>("/db-backups/settings", data).then((r) => r.data),
 };

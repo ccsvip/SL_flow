@@ -1,0 +1,26 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - generic [ref=e7]: SL
+    - generic [ref=e8]:
+      - heading "SL Flow" [level=3] [ref=e9]
+      - text: 研发流程协作平台
+  - generic [ref=e10]: 登录后即可管理项目、需求、任务与缺陷。
+  - generic [ref=e11]:
+    - generic [ref=e13]:
+      - generic "账号" [ref=e15]
+      - generic [ref=e19]:
+        - img "user" [ref=e21]:
+          - img [ref=e22]
+        - textbox "账号" [ref=e24]:
+          - /placeholder: username
+    - generic [ref=e26]:
+      - generic "密码" [ref=e28]
+      - generic [ref=e32]:
+        - img "lock" [ref=e34]:
+          - img [ref=e35]
+        - textbox "密码" [ref=e37]:
+          - /placeholder: password
+        - img "eye-invisible" [ref=e39] [cursor=pointer]:
+          - img [ref=e40]
+    - button "登 录" [ref=e43] [cursor=pointer]:
+      - generic [ref=e44]: 登 录

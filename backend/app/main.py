@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +14,7 @@ from app.api.routes import (
     bugs,
     comments,
     dashboard,
+    db_backups,
     projects,
     stories,
     system,
@@ -20,9 +22,20 @@ from app.api.routes import (
     users,
 )
 from app.core.config import settings
+from app.core.scheduler import shutdown_scheduler, start_scheduler
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s :: %(message)s")
 logger = logging.getLogger("slflow")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Boot the APScheduler that runs periodic database backups.
+    await start_scheduler()
+    try:
+        yield
+    finally:
+        await shutdown_scheduler()
 
 
 def create_app() -> FastAPI:
@@ -33,6 +46,7 @@ def create_app() -> FastAPI:
         docs_url="/api/docs",
         redoc_url="/api/redoc",
         openapi_url="/api/openapi.json",
+        lifespan=lifespan,
     )
 
     app.add_middleware(
@@ -55,6 +69,7 @@ def create_app() -> FastAPI:
     api.include_router(dashboard.router)
     api.include_router(system.router)
     api.include_router(audit_logs.router)
+    api.include_router(db_backups.router)
 
     @api.get("/healthz")
     async def healthz() -> dict[str, str]:

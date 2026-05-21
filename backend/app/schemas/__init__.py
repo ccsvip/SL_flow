@@ -14,6 +14,14 @@ from app.schemas.bug import BugOut, BugCreate, BugUpdate
 from app.schemas.comment import CommentOut, CommentCreate
 from app.schemas.attachment import AttachmentOut
 from app.schemas.audit_log import AuditLogOut, AuditLogPage
+from app.schemas.db_backup import (
+    DBBackupOut,
+    DBBackupPage,
+    BackupSettingOut,
+    BackupSettingUpdate,
+    CreateBackupRequest,
+    RestoreResult,
+)
 from app.schemas.common import PaginatedResponse, IdList
 
 __all__ = [
@@ -26,5 +34,7 @@ __all__ = [
     "CommentOut", "CommentCreate",
     "AttachmentOut",
     "AuditLogOut", "AuditLogPage",
+    "DBBackupOut", "DBBackupPage", "BackupSettingOut", "BackupSettingUpdate",
+    "CreateBackupRequest", "RestoreResult",
     "PaginatedResponse", "IdList",
 ]

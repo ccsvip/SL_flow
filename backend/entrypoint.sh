@@ -22,6 +22,7 @@ if [[ -z "${SECRET_KEY:-}" ]] \
 fi
 
 echo "[entrypoint] Waiting for database..."
+mkdir -p /app/uploads /app/backups
 python -c "
 import asyncio, sys
 from sqlalchemy.ext.asyncio import create_async_engine
