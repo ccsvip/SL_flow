@@ -4,7 +4,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import List
 
-from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,18 +31,16 @@ class Settings(BaseSettings):
     GIT_REPO_PATH: str = "/workspace"
     ENABLE_HOT_RELOAD: bool = True
 
-    # CORS
-    CORS_ORIGINS: List[str] = ["*"]
+    # CORS - comma-separated string. We parse to list lazily to bypass pydantic's
+    # complex-type JSON decoding for env vars.
+    CORS_ORIGINS: str = "*"
 
-    @field_validator("CORS_ORIGINS", mode="before")
-    @classmethod
-    def _split_cors(cls, v):
-        if isinstance(v, str):
-            v = v.strip()
-            if not v:
-                return ["*"]
-            return [item.strip() for item in v.split(",") if item.strip()]
-        return v
+    @property
+    def cors_origins_list(self) -> List[str]:
+        v = self.CORS_ORIGINS.strip()
+        if not v:
+            return ["*"]
+        return [item.strip() for item in v.split(",") if item.strip()]
 
     @property
     def upload_path(self) -> Path:

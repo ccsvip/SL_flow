@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from typing import Annotated
@@ -56,8 +56,13 @@ async def me(user: CurrentUser) -> UserMe:
     return UserMe.model_validate(user)
 
 
-@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
-async def change_password(payload: PasswordChange, user: CurrentUser, db: DBSession) -> None:
+@router.post(
+    "/change-password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    response_model=None,
+)
+async def change_password(payload: PasswordChange, user: CurrentUser, db: DBSession):
     if not verify_password(payload.current_password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
     if payload.current_password == payload.new_password:

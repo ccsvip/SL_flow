@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List
 
 import aiofiles
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Query, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 
@@ -127,10 +127,15 @@ async def download_attachment(attachment_id: int, db: DBSession, _: CurrentUser)
     )
 
 
-@router.delete("/{attachment_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{attachment_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    response_model=None,
+)
 async def delete_attachment(
     attachment_id: int, db: DBSession, user: CurrentUser
-) -> None:
+):
     att = await db.get(Attachment, attachment_id)
     if not att:
         raise HTTPException(status_code=404, detail="Attachment not found")

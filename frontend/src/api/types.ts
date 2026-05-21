@@ -160,7 +160,14 @@ export interface SystemVersion {
   };
 }
 
-export interface UpdateInfo extends SystemVersion["git"] {
+export interface UpdateInfo {
+  available: boolean;
+  path?: string;
+  branch?: string | null;
+  local_commit?: string | null;
+  local_message?: string;
+  local_author?: string;
+  local_date?: string;
   remote_available?: boolean;
   remote_commit?: string;
   remote_message?: string;
@@ -168,4 +175,5 @@ export interface UpdateInfo extends SystemVersion["git"] {
   remote_date?: string;
   update_available?: boolean;
   incoming_commits?: string[];
+  reason?: string;
 }

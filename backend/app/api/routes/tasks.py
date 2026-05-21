@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DBSession
@@ -66,8 +66,13 @@ async def update_task(
     return TaskOut.model_validate(t)
 
 
-@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_task(task_id: int, db: DBSession, _: CurrentUser) -> None:
+@router.delete(
+    "/{task_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    response_model=None,
+)
+async def delete_task(task_id: int, db: DBSession, _: CurrentUser):
     t = await db.get(Task, task_id)
     if not t:
         raise HTTPException(status_code=404, detail="Task not found")

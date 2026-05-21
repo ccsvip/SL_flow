@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DBSession
@@ -63,8 +63,13 @@ async def update_story(
     return StoryOut.model_validate(s)
 
 
-@router.delete("/{story_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_story(story_id: int, db: DBSession, _: CurrentUser) -> None:
+@router.delete(
+    "/{story_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    response_model=None,
+)
+async def delete_story(story_id: int, db: DBSession, _: CurrentUser):
     s = await db.get(Story, story_id)
     if not s:
         raise HTTPException(status_code=404, detail="Story not found")

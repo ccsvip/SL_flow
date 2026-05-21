@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DBSession
@@ -64,8 +64,13 @@ async def update_bug(bug_id: int, payload: BugUpdate, db: DBSession, _: CurrentU
     return BugOut.model_validate(b)
 
 
-@router.delete("/{bug_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_bug(bug_id: int, db: DBSession, _: CurrentUser) -> None:
+@router.delete(
+    "/{bug_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    response_model=None,
+)
+async def delete_bug(bug_id: int, db: DBSession, _: CurrentUser):
     b = await db.get(Bug, bug_id)
     if not b:
         raise HTTPException(status_code=404, detail="Bug not found")

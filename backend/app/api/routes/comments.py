@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DBSession
@@ -37,8 +37,13 @@ async def create_comment(
     return CommentOut.model_validate(c)
 
 
-@router.delete("/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_comment(comment_id: int, db: DBSession, user: CurrentUser) -> None:
+@router.delete(
+    "/{comment_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    response_model=None,
+)
+async def delete_comment(comment_id: int, db: DBSession, user: CurrentUser):
     c = await db.get(Comment, comment_id)
     if not c:
         raise HTTPException(status_code=404, detail="Comment not found")
