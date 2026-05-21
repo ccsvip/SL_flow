@@ -24,6 +24,7 @@ ALLOWED_MIMES: set[str] = {
     # images
     "image/png",
     "image/jpeg",
+    "image/jpg",  # nonstandard but real-world (legacy Windows uploads)
     "image/gif",
     "image/webp",
     "image/avif",

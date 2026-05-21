@@ -3,12 +3,21 @@ set -euo pipefail
 
 cd /app
 
-# Refuse to boot with the default placeholder SECRET_KEY. A fixed shared secret
-# in production lets anyone who's seen this repo mint admin tokens.
-if [[ "${SECRET_KEY:-}" == "" ]] || [[ "${SECRET_KEY:-}" == change-me* ]]; then
-  echo "[entrypoint] FATAL: SECRET_KEY is unset or still the default placeholder." >&2
-  echo "[entrypoint] Set a real secret in .env, e.g.:" >&2
-  echo "[entrypoint]   SECRET_KEY=\$(python -c 'import secrets; print(secrets.token_urlsafe(48))')" >&2
+# Refuse to boot with an unsafe SECRET_KEY. A fixed shared secret in
+# production lets anyone who's seen the repo mint admin tokens.
+# Reject:
+#   - empty
+#   - the change-me-* placeholder from older configs
+#   - the replace-me-* placeholder from .env.example
+#   - anything shorter than 32 characters (too easy to brute force)
+if [[ -z "${SECRET_KEY:-}" ]] \
+   || [[ "${SECRET_KEY}" == change-me* ]] \
+   || [[ "${SECRET_KEY}" == replace-me* ]] \
+   || [[ ${#SECRET_KEY} -lt 32 ]]; then
+  echo "[entrypoint] FATAL: SECRET_KEY is missing, a placeholder, or shorter than 32 chars." >&2
+  echo "[entrypoint] Generate a strong key BEFORE starting:" >&2
+  echo "[entrypoint]   python -c 'import secrets; print(secrets.token_urlsafe(48))'" >&2
+  echo "[entrypoint] Then put it in .env as SECRET_KEY=..." >&2
   exit 1
 fi
 

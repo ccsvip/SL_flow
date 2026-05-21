@@ -123,8 +123,16 @@ async def _do_pull_and_rebuild() -> None:
     """Background task: git pull and `docker compose up -d --build`.
 
     The compose rebuild will recreate this very backend container, which
-    SIGKILLs the parent process - so we must spawn a fully-detached child
-    (new session, redirected stdio, nohup-style) that survives our death.
+    SIGKILLs every PID inside the container's namespace (pid 1 dies, kernel
+    cleans the namespace, all descendants die regardless of session/group).
+    `setsid` + `nohup` are NOT enough - they detach from the parent process,
+    not from the container's pid namespace.
+
+    Solution: spawn the rebuild from a SIBLING docker container that lives
+    in its own pid namespace. The host docker daemon is what holds the
+    sibling, and the sibling holds the compose orchestration. When this
+    backend container dies, the sibling survives, finishes the rebuild,
+    and the new backend comes up.
     """
     repo = settings.GIT_REPO_PATH
     log_path = Path(settings.UPLOAD_DIR) / ".last_update.log"
@@ -143,31 +151,43 @@ async def _do_pull_and_rebuild() -> None:
         _log("[abort] git pull failed - skipping rebuild")
         return
 
-    # Step 2: compose up -d --build, detached so we survive being killed.
-    # We invoke a shell snippet wrapped in `setsid` (new session, no parent
-    # process group) and `nohup` (ignore SIGHUP). stdout/stderr go to the
-    # log file so we can debug after the backend container restarts.
-    detached_cmd = (
-        f"setsid nohup sh -c 'cd {shlex.quote(repo)} && "
-        f"echo \"[detached] starting rebuild at $(date -Iseconds)\" >> {shlex.quote(str(log_path))} && "
-        f"docker compose up -d --build >> {shlex.quote(str(log_path))} 2>&1; "
-        f"echo \"[detached] rebuild exit=$?\" >> {shlex.quote(str(log_path))}' "
-        f"</dev/null >/dev/null 2>&1 &"
+    # Step 2: spawn a sibling container that owns the orchestration.
+    # We need the same compose project name so it recreates _this_ stack,
+    # not a fresh one. Compose derives the project name from the working
+    # directory's basename, so we mount the host repo at the same path.
+    inner_script = (
+        f"echo '[updater] starting at $(date -Iseconds)' >> /workspace/.last_update.log && "
+        f"cd /workspace && "
+        f"docker compose up -d --build >> /workspace/.last_update.log 2>&1; "
+        f"rc=$?; "
+        f"echo \"[updater] docker compose up exit=$rc at $(date -Iseconds)\" >> /workspace/.last_update.log"
     )
-    _log(f"[spawn] {detached_cmd}")
-    proc = await asyncio.create_subprocess_shell(
-        detached_cmd,
-        stdout=asyncio.subprocess.DEVNULL,
-        stderr=asyncio.subprocess.DEVNULL,
-        stdin=asyncio.subprocess.DEVNULL,
-    )
-    # Don't await proc - the shell snippet backgrounds the real work and
-    # returns immediately. We just log that we kicked it off.
-    try:
-        await asyncio.wait_for(proc.wait(), timeout=5)
-    except asyncio.TimeoutError:
-        pass  # That's OK; the wrapper shell shouldn't hang anyway.
-    _log("[spawn] detached rebuild kicked off; this container will be replaced shortly.")
+    sibling_cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "-d",
+        "--name",
+        "slflow-updater",
+        "-v",
+        "/var/run/docker.sock:/var/run/docker.sock",
+        "-v",
+        f"{repo}:/workspace",
+        "-w",
+        "/workspace",
+        "docker:27-cli",
+        "sh",
+        "-c",
+        inner_script,
+    ]
+
+    # Best-effort: kill any leftover updater container from a previous run.
+    await _run(["docker", "rm", "-f", "slflow-updater"], timeout=10)
+
+    rc, out, err = await _run(sibling_cmd, timeout=60)
+    _log(f"[spawn] docker run rc={rc} sibling_id={out.strip()[:12]}\n{err}")
+    if rc != 0:
+        _log("[abort] failed to spawn updater sibling")
 
 
 @router.post("/apply-update", status_code=status.HTTP_202_ACCEPTED)

@@ -22,7 +22,11 @@ A modern, ZenTao-inspired project & task management platform.
 ## Quick Start
 
 ```bash
-cp .env.example .env
+# 1. Generate a strong JWT secret (the backend refuses to boot without one)
+python -c "import secrets; print('SECRET_KEY=' + secrets.token_urlsafe(48))" > .env
+# 2. Append the rest of the defaults
+cat .env.example | grep -v '^SECRET_KEY=' >> .env
+# 3. Boot the stack
 docker compose up -d --build
 ```
 

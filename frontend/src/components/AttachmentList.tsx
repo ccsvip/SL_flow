@@ -88,29 +88,55 @@ export default function AttachmentList({
   type ServerItem = { kind: "server"; data: Attachment };
   type Item = StagedItem | ServerItem;
 
+  // Cache one object URL per File instance so re-renders don't churn URLs
+  // (URL.createObjectURL is cheap but creates a new resource each call,
+  // which momentarily breaks <img src> continuity and leaks until the next
+  // unmount). The cache is per-component so it is GC'd on unmount.
+  const blobCacheRef = React.useRef<Map<File, string>>(new Map());
+
+  React.useEffect(() => {
+    // Revoke object URLs for files that left the staged list. Don't touch
+    // URLs for files still present.
+    const cache = blobCacheRef.current;
+    const stillStaged = new Set(staged);
+    for (const [file, url] of cache.entries()) {
+      if (!stillStaged.has(file)) {
+        URL.revokeObjectURL(url);
+        cache.delete(file);
+      }
+    }
+  }, [staged]);
+
+  React.useEffect(() => {
+    // Final cleanup on unmount.
+    const cache = blobCacheRef.current;
+    return () => {
+      for (const url of cache.values()) URL.revokeObjectURL(url);
+      cache.clear();
+    };
+  }, []);
+
   const items: Item[] = React.useMemo(() => {
     if (isStaging) {
-      return staged.map((f, i) => ({
-        kind: "staged" as const,
-        id: `staged-${i}-${f.name}`,
-        file: f,
-        objectUrl: URL.createObjectURL(f),
-        is_image: f.type.startsWith("image/"),
-        is_video: f.type.startsWith("video/"),
-      }));
+      const cache = blobCacheRef.current;
+      return staged.map((f, i) => {
+        let url = cache.get(f);
+        if (!url) {
+          url = URL.createObjectURL(f);
+          cache.set(f, url);
+        }
+        return {
+          kind: "staged" as const,
+          id: `staged-${i}-${f.name}`,
+          file: f,
+          objectUrl: url,
+          is_image: f.type.startsWith("image/"),
+          is_video: f.type.startsWith("video/"),
+        };
+      });
     }
     return serverData.map((a) => ({ kind: "server" as const, data: a }));
   }, [isStaging, staged, serverData]);
-
-  // Cleanup object URLs when staged list changes.
-  React.useEffect(() => {
-    if (!isStaging) return;
-    return () => {
-      items.forEach((it) => {
-        if (it.kind === "staged") URL.revokeObjectURL(it.objectUrl);
-      });
-    };
-  }, [isStaging, items]);
 
   const [previewIdx, setPreviewIdx] = React.useState<number | null>(null);
   const previewing = previewIdx !== null ? items[previewIdx] : null;
@@ -316,20 +342,24 @@ export default function AttachmentList({
                 style={{ maxWidth: "100%", maxHeight: "70vh", borderRadius: 8 }}
               />
             )}
-            {items.length > 1 && previewIdx !== null && (
+            {previewIdx !== null && (
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                <Button
-                  disabled={previewIdx === 0}
-                  onClick={() => setPreviewIdx(previewIdx - 1)}
-                >
-                  上一张
-                </Button>
-                <Button
-                  disabled={previewIdx === items.length - 1}
-                  onClick={() => setPreviewIdx(previewIdx + 1)}
-                >
-                  下一张
-                </Button>
+                {items.length > 1 && (
+                  <>
+                    <Button
+                      disabled={previewIdx === 0}
+                      onClick={() => setPreviewIdx(previewIdx - 1)}
+                    >
+                      上一张
+                    </Button>
+                    <Button
+                      disabled={previewIdx === items.length - 1}
+                      onClick={() => setPreviewIdx(previewIdx + 1)}
+                    >
+                      下一张
+                    </Button>
+                  </>
+                )}
                 {previewing.kind === "server" && (
                   <Tooltip title="下载原文件">
                     <Button
