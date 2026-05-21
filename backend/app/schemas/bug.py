@@ -59,3 +59,5 @@ class BugOut(BaseModel):
     assignee: Optional[UserOut] = None
     created_at: datetime
     updated_at: datetime
+    # See TaskOut.attachment_count - same idea for bugs.
+    attachment_count: int = 0

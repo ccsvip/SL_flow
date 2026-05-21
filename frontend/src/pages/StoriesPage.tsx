@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  App as AntdApp,
   Button,
   Card,
   Empty,
@@ -8,9 +7,15 @@ import {
   Select,
   Space,
   Table,
+  Tooltip,
   Typography,
 } from "antd";
-import { FileTextOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
+import {
+  FileTextOutlined,
+  PaperClipOutlined,
+  PlusOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnsType } from "antd/es/table";
 
@@ -55,9 +60,31 @@ export default function StoriesPage() {
       title: "标题",
       dataIndex: "title",
       render: (_, r) => (
-        <a onClick={() => setEditing(r)} style={{ fontWeight: 500 }}>
-          {r.title}
-        </a>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <a onClick={() => setEditing(r)} style={{ fontWeight: 500 }}>
+            {r.title}
+          </a>
+          {r.attachment_count > 0 && (
+            <Tooltip title={`含 ${r.attachment_count} 个附件`}>
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 2,
+                  fontSize: 12,
+                  color: "var(--accent, #1677ff)",
+                  background: "rgba(22,119,255,0.1)",
+                  padding: "1px 6px",
+                  borderRadius: 10,
+                  fontWeight: 600,
+                }}
+              >
+                <PaperClipOutlined style={{ fontSize: 11 }} />
+                {r.attachment_count}
+              </span>
+            </Tooltip>
+          )}
+        </span>
       ),
     },
     {

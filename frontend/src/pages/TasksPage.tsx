@@ -6,6 +6,7 @@ import {
   Segmented,
   Select,
   Table,
+  Tooltip,
   Typography,
   Empty,
 } from "antd";
@@ -13,6 +14,7 @@ import {
   AppstoreOutlined,
   BarsOutlined,
   CheckSquareOutlined,
+  PaperClipOutlined,
   PlusOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
@@ -68,9 +70,31 @@ export default function TasksPage() {
       title: "标题",
       dataIndex: "title",
       render: (_, r) => (
-        <a onClick={() => setEditing(r)} style={{ fontWeight: 500 }}>
-          {r.title}
-        </a>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <a onClick={() => setEditing(r)} style={{ fontWeight: 500 }}>
+            {r.title}
+          </a>
+          {r.attachment_count > 0 && (
+            <Tooltip title={`含 ${r.attachment_count} 个附件`}>
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 2,
+                  fontSize: 12,
+                  color: "var(--accent, #1677ff)",
+                  background: "rgba(22,119,255,0.1)",
+                  padding: "1px 6px",
+                  borderRadius: 10,
+                  fontWeight: 600,
+                }}
+              >
+                <PaperClipOutlined style={{ fontSize: 11 }} />
+                {r.attachment_count}
+              </span>
+            </Tooltip>
+          )}
+        </span>
       ),
     },
     {
@@ -203,7 +227,19 @@ export default function TasksPage() {
                       className="slf-kanban-card"
                       onClick={() => setEditing(t)}
                     >
-                      <div style={{ fontWeight: 600 }}>{t.title}</div>
+                      <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {t.title}
+                        </span>
+                        {t.attachment_count > 0 && (
+                          <Tooltip title={`含 ${t.attachment_count} 个附件`}>
+                            <span style={{ fontSize: 11, opacity: 0.75, display: "inline-flex", alignItems: "center", gap: 2 }}>
+                              <PaperClipOutlined style={{ fontSize: 11 }} />
+                              {t.attachment_count}
+                            </span>
+                          </Tooltip>
+                        )}
+                      </div>
                       <div
                         style={{
                           marginTop: 6,

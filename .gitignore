@@ -12,6 +12,7 @@ node_modules/
 dist/
 .vite/
 *.log
+*.tsbuildinfo
 
 # Editors
 .vscode/
@@ -27,3 +28,9 @@ backend/.alembic_initialized
 # Hot-update artifacts (sibling container drops these in the workspace root)
 .last_update.log
 .update.lock
+
+# Playwright MCP scratch outputs (generated during browser-driven QA runs).
+.playwright-mcp/
+
+# npm lock - the project intentionally does not pin node deps here.
+frontend/package-lock.json

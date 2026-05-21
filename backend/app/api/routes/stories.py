@@ -1,15 +1,39 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.api.deps import CurrentUser, DBSession
 from app.core.audit import record_audit
+from app.models.attachment import Attachment, AttachmentTarget
 from app.models.audit_log import AuditAction, AuditTargetType
 from app.models.story import Story
 from app.schemas.story import StoryCreate, StoryOut, StoryUpdate
 
 router = APIRouter(prefix="/stories", tags=["stories"])
+
+
+async def _attachment_counts(db, target_ids: list[int]) -> dict[int, int]:
+    """Bulk count attachments for stories. See tasks._attachment_counts."""
+    if not target_ids:
+        return {}
+    rows = (
+        await db.execute(
+            select(Attachment.target_id, func.count(Attachment.id))
+            .where(
+                Attachment.target_type == AttachmentTarget.story,
+                Attachment.target_id.in_(target_ids),
+            )
+            .group_by(Attachment.target_id)
+        )
+    ).all()
+    return {tid: cnt for tid, cnt in rows}
+
+
+def _story_to_out(s: Story, counts: dict[int, int]) -> StoryOut:
+    out = StoryOut.model_validate(s)
+    out.attachment_count = counts.get(s.id, 0)
+    return out
 
 
 @router.get("", response_model=list[StoryOut])
@@ -31,7 +55,8 @@ async def list_stories(
     if q:
         stmt = stmt.where(Story.title.ilike(f"%{q}%"))
     rows = (await db.execute(stmt)).scalars().unique().all()
-    return [StoryOut.model_validate(s) for s in rows]
+    counts = await _attachment_counts(db, [s.id for s in rows])
+    return [_story_to_out(s, counts) for s in rows]
 
 
 @router.get("/{story_id}", response_model=StoryOut)
@@ -39,7 +64,8 @@ async def get_story(story_id: int, db: DBSession, _: CurrentUser) -> StoryOut:
     s = await db.get(Story, story_id)
     if not s:
         raise HTTPException(status_code=404, detail="Story not found")
-    return StoryOut.model_validate(s)
+    counts = await _attachment_counts(db, [s.id])
+    return _story_to_out(s, counts)
 
 
 @router.post("", response_model=StoryOut, status_code=status.HTTP_201_CREATED)
@@ -60,7 +86,8 @@ async def create_story(
         request=request,
         status_code=201,
     )
-    return StoryOut.model_validate(s)
+    counts = await _attachment_counts(db, [s.id])
+    return _story_to_out(s, counts)
 
 
 @router.patch("/{story_id}", response_model=StoryOut)
@@ -90,7 +117,8 @@ async def update_story(
         status_code=200,
         extra={"changed": changed},
     )
-    return StoryOut.model_validate(s)
+    counts = await _attachment_counts(db, [s.id])
+    return _story_to_out(s, counts)
 
 
 @router.delete(

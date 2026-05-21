@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from app.models.user import UserRole
 
@@ -25,7 +25,11 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = Field(default=None, max_length=128)
     role: Optional[UserRole] = None
     is_active: Optional[bool] = None
-    avatar: Optional[str] = None
+    # NOTE: `avatar` is intentionally NOT exposed here. It used to be, but a
+    # round-trip footgun (FE submits the rewritten `/api/users/.../avatar?v=...`
+    # URL back to PATCH and the URL string ends up stored as the on-disk
+    # path) made it dangerous. Avatar mutations go through the dedicated
+    # POST/DELETE /users/me/avatar endpoints only.
 
 
 class UserOut(BaseModel):
@@ -35,11 +39,32 @@ class UserOut(BaseModel):
     username: str
     email: Optional[str] = None
     full_name: Optional[str] = None
+    # On the wire `avatar` is the URL the frontend can fetch (with auth);
+    # internally the User model stores the on-disk relative path. We rewrite
+    # the value after construction so we never leak the real storage path.
     avatar: Optional[str] = None
     role: UserRole
     is_active: bool
     created_at: datetime
     updated_at: datetime
+
+    @model_validator(mode="after")
+    def _avatar_to_url(self) -> "UserOut":
+        if self.avatar:
+            # Whatever the underlying value was (a storage path), present a
+            # stable, predictable URL keyed by user id. The frontend's
+            # AuthImage helper hits this through the JWT-bearing axios client.
+            # The `?v=<updated_at_epoch_ms>` cache-buster forces the browser
+            # AND our in-memory blob cache to refetch when the user changes
+            # their avatar. We use millisecond precision because two uploads
+            # can land within the same wall-clock second - second-precision
+            # would produce identical URLs and a stale cached blob would
+            # survive forever.
+            ts_ms = int(self.updated_at.timestamp() * 1000)
+            self.avatar = f"/api/users/{self.id}/avatar?v={ts_ms}"
+        else:
+            self.avatar = None
+        return self
 
 
 class UserMe(UserOut):

@@ -1,15 +1,40 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.api.deps import CurrentUser, DBSession
 from app.core.audit import record_audit
+from app.models.attachment import Attachment, AttachmentTarget
 from app.models.audit_log import AuditAction, AuditTargetType
 from app.models.task import Task
 from app.schemas.task import TaskCreate, TaskOut, TaskUpdate
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
+
+
+async def _attachment_counts(db, target_ids: list[int]) -> dict[int, int]:
+    """Bulk count attachments for a list of task ids. One round-trip,
+    grouped server-side. Returns an id -> count map."""
+    if not target_ids:
+        return {}
+    rows = (
+        await db.execute(
+            select(Attachment.target_id, func.count(Attachment.id))
+            .where(
+                Attachment.target_type == AttachmentTarget.task,
+                Attachment.target_id.in_(target_ids),
+            )
+            .group_by(Attachment.target_id)
+        )
+    ).all()
+    return {tid: cnt for tid, cnt in rows}
+
+
+def _task_to_out(t: Task, counts: dict[int, int]) -> TaskOut:
+    out = TaskOut.model_validate(t)
+    out.attachment_count = counts.get(t.id, 0)
+    return out
 
 
 @router.get("", response_model=list[TaskOut])
@@ -34,7 +59,8 @@ async def list_tasks(
     if q:
         stmt = stmt.where(Task.title.ilike(f"%{q}%"))
     rows = (await db.execute(stmt)).scalars().unique().all()
-    return [TaskOut.model_validate(t) for t in rows]
+    counts = await _attachment_counts(db, [t.id for t in rows])
+    return [_task_to_out(t, counts) for t in rows]
 
 
 @router.get("/{task_id}", response_model=TaskOut)
@@ -42,7 +68,8 @@ async def get_task(task_id: int, db: DBSession, _: CurrentUser) -> TaskOut:
     t = await db.get(Task, task_id)
     if not t:
         raise HTTPException(status_code=404, detail="Task not found")
-    return TaskOut.model_validate(t)
+    counts = await _attachment_counts(db, [t.id])
+    return _task_to_out(t, counts)
 
 
 @router.post("", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
@@ -63,7 +90,8 @@ async def create_task(
         request=request,
         status_code=201,
     )
-    return TaskOut.model_validate(t)
+    counts = await _attachment_counts(db, [t.id])
+    return _task_to_out(t, counts)
 
 
 @router.patch("/{task_id}", response_model=TaskOut)
@@ -93,7 +121,8 @@ async def update_task(
         status_code=200,
         extra={"changed": changed},
     )
-    return TaskOut.model_validate(t)
+    counts = await _attachment_counts(db, [t.id])
+    return _task_to_out(t, counts)
 
 
 @router.delete(

@@ -50,3 +50,5 @@ class StoryOut(BaseModel):
     assignee: Optional[UserOut] = None
     created_at: datetime
     updated_at: datetime
+    # See TaskOut.attachment_count - same idea for stories.
+    attachment_count: int = 0

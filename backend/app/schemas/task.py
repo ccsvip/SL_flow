@@ -56,3 +56,7 @@ class TaskOut(BaseModel):
     assignee: Optional[UserOut] = None
     created_at: datetime
     updated_at: datetime
+    # Number of attachments on this task. The list endpoint fills this in via
+    # a single bulk count query so the FE can render a 📎 indicator without a
+    # second roundtrip per row.
+    attachment_count: int = 0

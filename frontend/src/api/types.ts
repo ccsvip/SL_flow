@@ -60,6 +60,7 @@ export interface Story {
   assignee: User | null;
   created_at: string;
   updated_at: string;
+  attachment_count: number;
 }
 
 export type TaskStatus = "todo" | "in_progress" | "review" | "done" | "cancelled";
@@ -79,6 +80,7 @@ export interface Task {
   assignee: User | null;
   created_at: string;
   updated_at: string;
+  attachment_count: number;
 }
 
 export type BugStatus = "open" | "in_progress" | "resolved" | "closed" | "reopened";
@@ -100,6 +102,7 @@ export interface Bug {
   assignee: User | null;
   created_at: string;
   updated_at: string;
+  attachment_count: number;
 }
 
 export type CommentTargetType = "project" | "story" | "task" | "bug";

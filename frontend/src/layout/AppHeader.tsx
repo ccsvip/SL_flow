@@ -26,16 +26,48 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useAuthStore } from "@/store/auth";
 import { useUIStore, ACCENT_PRESETS, AccentName } from "@/store/ui";
 import { system } from "@/api/client";
+import { http } from "@/api/http";
 import ChangePasswordModal from "@/components/modals/ChangePasswordModal";
 import { initials } from "@/utils/format";
 import UpdateModal from "@/components/modals/UpdateModal";
 
 const { Header } = Layout;
+
+// Tiny per-component avatar fetcher: AppHeader only ever shows ONE avatar
+// (the current user's), and we want it to update immediately after the user
+// uploads a new photo. We re-fetch whenever the avatar URL changes.
+function useHeaderAvatar(avatarUrl: string | null | undefined): string | null {
+  const [blob, setBlob] = useState<string | null>(null);
+  useEffect(() => {
+    if (!avatarUrl) {
+      setBlob(null);
+      return;
+    }
+    let cancelled = false;
+    let createdUrl: string | null = null;
+    const path = avatarUrl.startsWith("/api/") ? avatarUrl.slice(4) : avatarUrl;
+    http
+      .get<Blob>(path, { responseType: "blob" })
+      .then((r) => {
+        if (cancelled) return;
+        createdUrl = URL.createObjectURL(r.data);
+        setBlob(createdUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setBlob(null);
+      });
+    return () => {
+      cancelled = true;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [avatarUrl]);
+  return blob;
+}
 
 export default function AppHeader() {
   const { user, logout } = useAuthStore();
@@ -51,6 +83,7 @@ export default function AppHeader() {
   const qc = useQueryClient();
   const [pwOpen, setPwOpen] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
+  const headerAvatar = useHeaderAvatar(user?.avatar);
 
   const { data: version } = useQuery({
     queryKey: ["version"],
@@ -208,12 +241,15 @@ export default function AppHeader() {
             <Space style={{ cursor: "pointer", padding: "0 4px" }}>
               <Avatar
                 size={32}
+                src={headerAvatar || undefined}
                 style={{
-                  background: "linear-gradient(135deg, var(--accent), #722ed1)",
+                  background: headerAvatar
+                    ? undefined
+                    : "linear-gradient(135deg, var(--accent), #722ed1)",
                   fontWeight: 700,
                 }}
               >
-                {initials(user?.full_name || user?.username)}
+                {headerAvatar ? null : initials(user?.full_name || user?.username)}
               </Avatar>
               <span style={{ fontWeight: 500 }}>
                 {user?.full_name || user?.username}

@@ -43,6 +43,16 @@ export const users = {
   remove: (id: number) => http.delete(`/users/${id}`).then(() => true),
   resetPassword: (id: number, new_password: string) =>
     http.post(`/users/${id}/reset-password`, { new_password }).then(() => true),
+  uploadAvatar: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file, file.name);
+    return http
+      .post<User>("/users/me/avatar", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then((r) => r.data);
+  },
+  removeAvatar: () => http.delete("/users/me/avatar").then(() => true),
 };
 
 // --- Projects ------------------------------------------------------------

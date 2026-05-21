@@ -8,9 +8,15 @@ import {
   Skeleton,
   Tabs,
   Tag,
+  Tooltip,
   Typography,
 } from "antd";
-import { ArrowLeftOutlined, EditOutlined, ProjectOutlined } from "@ant-design/icons";
+import {
+  ArrowLeftOutlined,
+  EditOutlined,
+  PaperClipOutlined,
+  ProjectOutlined,
+} from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -198,7 +204,19 @@ export default function ProjectDetailPage() {
                       ) : (
                         items.map((t) => (
                           <div className="slf-kanban-card" key={t.id}>
-                            <div style={{ fontWeight: 600 }}>{t.title}</div>
+                            <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {t.title}
+                              </span>
+                              {t.attachment_count > 0 && (
+                                <Tooltip title={`含 ${t.attachment_count} 个附件`}>
+                                  <span style={{ fontSize: 11, opacity: 0.75, display: "inline-flex", alignItems: "center", gap: 2 }}>
+                                    <PaperClipOutlined style={{ fontSize: 11 }} />
+                                    {t.attachment_count}
+                                  </span>
+                                </Tooltip>
+                              )}
+                            </div>
                             <div
                               style={{
                                 marginTop: 6,
@@ -239,7 +257,17 @@ export default function ProjectDetailPage() {
                       }}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <Typography.Text strong>{s.title}</Typography.Text>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <Typography.Text strong>{s.title}</Typography.Text>
+                          {s.attachment_count > 0 && (
+                            <Tooltip title={`含 ${s.attachment_count} 个附件`}>
+                              <span style={{ fontSize: 11, opacity: 0.75, display: "inline-flex", alignItems: "center", gap: 2 }}>
+                                <PaperClipOutlined style={{ fontSize: 11 }} />
+                                {s.attachment_count}
+                              </span>
+                            </Tooltip>
+                          )}
+                        </span>
                         <div style={{ marginTop: 4 }}>
                           <StatusTag value={s.status} />
                           <StatusTag value={s.priority} />
@@ -272,7 +300,17 @@ export default function ProjectDetailPage() {
                       }}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <Typography.Text strong>{b.title}</Typography.Text>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <Typography.Text strong>{b.title}</Typography.Text>
+                          {b.attachment_count > 0 && (
+                            <Tooltip title={`含 ${b.attachment_count} 个附件`}>
+                              <span style={{ fontSize: 11, opacity: 0.75, display: "inline-flex", alignItems: "center", gap: 2 }}>
+                                <PaperClipOutlined style={{ fontSize: 11 }} />
+                                {b.attachment_count}
+                              </span>
+                            </Tooltip>
+                          )}
+                        </span>
                         <div style={{ marginTop: 4 }}>
                           <StatusTag value={b.status} />
                           <StatusTag value={b.severity} />
