@@ -37,7 +37,11 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p /app/uploads
+# Ensure entrypoint is executable. Files copied from a Windows host (NTFS,
+# SMB, scp from PowerShell) often lose the +x bit, which causes the
+# container to crash with `Permission denied` on boot.
+RUN chmod +x /app/entrypoint.sh \
+    && mkdir -p /app/uploads
 
 EXPOSE 8000
 
