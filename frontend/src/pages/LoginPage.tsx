@@ -56,13 +56,12 @@ export default function LoginPage() {
             </div>
           </div>
           <Typography.Paragraph type="secondary" style={{ marginBottom: 24 }}>
-            登录后即可管理项目、需求、任务与缺陷。默认账号 <code>admin / admin</code>，登录后请立即修改。
+            登录后即可管理项目、需求、任务与缺陷。
           </Typography.Paragraph>
 
           <Form
             layout="vertical"
             onFinish={onFinish}
-            initialValues={{ username: "admin", password: "admin" }}
             requiredMark={false}
             size="large"
           >
