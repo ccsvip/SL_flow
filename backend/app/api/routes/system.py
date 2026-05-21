@@ -22,12 +22,21 @@ def _read_local_version() -> str:
     return "0.0.0"
 
 
-async def _run(cmd: list[str], cwd: str | None = None, timeout: float = 60.0) -> tuple[int, str, str]:
+async def _run(
+    cmd: list[str],
+    cwd: str | None = None,
+    timeout: float = 60.0,
+    env_extra: dict[str, str] | None = None,
+) -> tuple[int, str, str]:
+    env = dict(os.environ)
+    if env_extra:
+        env.update(env_extra)
     proc = await asyncio.create_subprocess_exec(
         *cmd,
         cwd=cwd,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
+        env=env,
     )
     try:
         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
@@ -37,6 +46,40 @@ async def _run(cmd: list[str], cwd: str | None = None, timeout: float = 60.0) ->
     return proc.returncode or 0, stdout.decode("utf-8", "ignore"), stderr.decode("utf-8", "ignore")
 
 
+def _git_env() -> dict[str, str]:
+    """Env vars to attach to every git invocation.
+
+    - GIT_TERMINAL_PROMPT=0: refuse to ask for a username/password on stdin
+      (we have no TTY in the container, so the prompt would just hang or
+      error with "could not read Username for 'https://...'").
+    - When GITHUB_TOKEN is set, register a one-shot credential helper that
+      echoes the token. This keeps the secret out of the command line and
+      out of any on-disk config, while letting `git fetch/pull` over HTTPS
+      authenticate against private repos.
+    """
+    env: dict[str, str] = {"GIT_TERMINAL_PROMPT": "0"}
+    token = settings.GITHUB_TOKEN.strip() if settings.GITHUB_TOKEN else ""
+    if token:
+        # The credential helper protocol: git invokes this with action
+        # `get` and reads username/password from stdout. `x-access-token`
+        # is the documented username for GitHub PATs / installation tokens.
+        helper = (
+            "!f() { echo username=x-access-token; echo password=$GITHUB_TOKEN; }; f"
+        )
+        # `-c http.https://github.com/.extraheader=` clears any cached header
+        # from a prior git config so our helper is the source of truth.
+        env["GIT_CONFIG_COUNT"] = "1"
+        env["GIT_CONFIG_KEY_0"] = "credential.helper"
+        env["GIT_CONFIG_VALUE_0"] = helper
+        env["GITHUB_TOKEN"] = token
+    return env
+
+
+async def _run_git(cmd: list[str], cwd: str | None = None, timeout: float = 60.0) -> tuple[int, str, str]:
+    """Wrapper around _run that injects the git-specific env (no prompt + token helper)."""
+    return await _run(cmd, cwd=cwd, timeout=timeout, env_extra=_git_env())
+
+
 async def _git_info() -> dict[str, Any]:
     repo = settings.GIT_REPO_PATH
     if not Path(repo, ".git").exists():
@@ -44,13 +87,13 @@ async def _git_info() -> dict[str, Any]:
 
     info: dict[str, Any] = {"available": True, "path": repo}
 
-    rc, out, _ = await _run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=repo)
+    rc, out, _ = await _run_git(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=repo)
     info["branch"] = out.strip() if rc == 0 else None
 
-    rc, out, _ = await _run(["git", "rev-parse", "HEAD"], cwd=repo)
+    rc, out, _ = await _run_git(["git", "rev-parse", "HEAD"], cwd=repo)
     info["local_commit"] = out.strip() if rc == 0 else None
 
-    rc, out, _ = await _run(["git", "log", "-1", "--pretty=%s|%an|%ai"], cwd=repo)
+    rc, out, _ = await _run_git(["git", "log", "-1", "--pretty=%s|%an|%ai"], cwd=repo)
     if rc == 0 and out.strip():
         msg, author, date = out.strip().split("|", 2)
         info["local_message"] = msg
@@ -78,13 +121,29 @@ async def check_update(_: AdminUser) -> dict[str, Any]:
     if not Path(repo, ".git").exists():
         raise HTTPException(status_code=400, detail="Not a git working tree at GIT_REPO_PATH")
 
-    rc, _, err = await _run(["git", "fetch", "--all", "--prune"], cwd=repo, timeout=90)
+    rc, _, err = await _run_git(["git", "fetch", "--all", "--prune"], cwd=repo, timeout=90)
     if rc != 0:
-        raise HTTPException(status_code=502, detail=f"git fetch failed: {err.strip()}")
+        msg = err.strip() or "git fetch failed"
+        # Prompt-disabled git emits a recognisable error when it would have
+        # asked for credentials. Surface a clearer, actionable hint.
+        lower = msg.lower()
+        if (
+            "could not read username" in lower
+            or "terminal prompts disabled" in lower
+            or "authentication failed" in lower
+            or "403" in lower
+        ):
+            hint = (
+                "git 无法认证远端仓库。如果是私有仓库，请在 .env 设置 "
+                "GITHUB_TOKEN=<personal-access-token>（仅需 repo 读权限）"
+                "并重启 backend 容器。"
+            )
+            raise HTTPException(status_code=502, detail=f"{msg}\n\n{hint}")
+        raise HTTPException(status_code=502, detail=f"git fetch failed: {msg}")
 
     info = await _git_info()
     branch = info.get("branch") or "main"
-    rc, remote_commit, _ = await _run(["git", "rev-parse", f"origin/{branch}"], cwd=repo)
+    rc, remote_commit, _ = await _run_git(["git", "rev-parse", f"origin/{branch}"], cwd=repo)
     if rc != 0:
         info["remote_available"] = False
         info["update_available"] = False
@@ -96,7 +155,7 @@ async def check_update(_: AdminUser) -> dict[str, Any]:
     info["update_available"] = bool(remote_commit) and remote_commit != info.get("local_commit")
 
     if info["update_available"]:
-        rc, out, _ = await _run(
+        rc, out, _ = await _run_git(
             ["git", "log", "-1", "--pretty=%s|%an|%ai", remote_commit], cwd=repo
         )
         if rc == 0 and out.strip():
@@ -105,7 +164,7 @@ async def check_update(_: AdminUser) -> dict[str, Any]:
             info["remote_author"] = parts[1] if len(parts) > 1 else None
             info["remote_date"] = parts[2] if len(parts) > 2 else None
 
-        rc, out, _ = await _run(
+        rc, out, _ = await _run_git(
             [
                 "git",
                 "log",
@@ -256,7 +315,7 @@ async def _do_pull_and_rebuild() -> None:
         _log(f"=== update started at {time.strftime('%Y-%m-%dT%H:%M:%S%z')} ===")
 
         # 1. git pull (synchronous, fast).
-        rc, out, err = await _run(["git", "pull", "--ff-only"], cwd=repo, timeout=180)
+        rc, out, err = await _run_git(["git", "pull", "--ff-only"], cwd=repo, timeout=180)
         _log(f"[git pull] rc={rc}\n{out}\n{err}")
         if rc != 0:
             _log("[abort] git pull failed - skipping rebuild")

@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     APP_VERSION_FILE: str = "/app/VERSION"
     GIT_REPO_PATH: str = "/workspace"
     ENABLE_HOT_RELOAD: bool = True
+    # Personal-access token used for non-interactive `git fetch` / `git pull`
+    # against private GitHub repos. Optional; leave blank for public repos.
+    # When set we inject it via an inline credential.helper so the token
+    # never lands on the command line or in a config file.
+    GITHUB_TOKEN: str = ""
 
     # CORS - comma-separated string. We parse to list lazily to bypass pydantic's
     # complex-type JSON decoding for env vars.

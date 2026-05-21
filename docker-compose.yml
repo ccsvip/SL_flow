@@ -37,6 +37,9 @@ services:
       GIT_REPO_PATH: /workspace
       ENABLE_HOT_RELOAD: ${ENABLE_HOT_RELOAD:-true}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      # Optional: GitHub PAT for non-interactive `git fetch/pull` against
+      # private repos. Leave blank for public repos.
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       # Hot-update needs the HOST repo path (not the in-container path) so
       # the sibling updater container mounts the right source via the docker
       # socket. Also pin the compose project name so the sibling targets the
