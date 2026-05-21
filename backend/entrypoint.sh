@@ -3,6 +3,15 @@ set -euo pipefail
 
 cd /app
 
+# Refuse to boot with the default placeholder SECRET_KEY. A fixed shared secret
+# in production lets anyone who's seen this repo mint admin tokens.
+if [[ "${SECRET_KEY:-}" == "" ]] || [[ "${SECRET_KEY:-}" == change-me* ]]; then
+  echo "[entrypoint] FATAL: SECRET_KEY is unset or still the default placeholder." >&2
+  echo "[entrypoint] Set a real secret in .env, e.g.:" >&2
+  echo "[entrypoint]   SECRET_KEY=\$(python -c 'import secrets; print(secrets.token_urlsafe(48))')" >&2
+  exit 1
+fi
+
 echo "[entrypoint] Waiting for database..."
 python -c "
 import asyncio, sys

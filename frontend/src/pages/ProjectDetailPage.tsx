@@ -1,7 +1,6 @@
 import React from "react";
 import {
   App as AntdApp,
-  Avatar,
   Button,
   Card,
   Descriptions,

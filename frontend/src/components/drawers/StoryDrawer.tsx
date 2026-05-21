@@ -13,7 +13,7 @@ import {
 import { DeleteOutlined, SaveOutlined } from "@ant-design/icons";
 import { useMutation } from "@tanstack/react-query";
 
-import { stories } from "@/api/client";
+import { stories, attachments } from "@/api/client";
 import { extractError } from "@/api/http";
 import { useProjectOptions, useUserOptions } from "@/hooks/options";
 import AttachmentList from "@/components/AttachmentList";
@@ -56,10 +56,12 @@ export default function StoryDrawer({
   const isEdit = !!story;
   const projectOpts = useProjectOptions();
   const userOpts = useUserOptions();
+  const [stagedFiles, setStagedFiles] = React.useState<File[]>([]);
 
   React.useEffect(() => {
     if (!open) return;
     form.resetFields();
+    setStagedFiles([]);
     if (story) {
       form.setFieldsValue({ ...story, assignee_id: story.assignee?.id ?? null });
     } else {
@@ -76,7 +78,15 @@ export default function StoryDrawer({
     mutationFn: async () => {
       const v = await form.validateFields();
       if (isEdit && story) return stories.update(story.id, v);
-      return stories.create(v);
+      const created = await stories.create(v);
+      if (stagedFiles.length > 0) {
+        try {
+          await attachments.upload("story", created.id, stagedFiles);
+        } catch {
+          message.warning("需求已创建，但部分附件上传失败，可在编辑页重新上传");
+        }
+      }
+      return created;
     },
     onSuccess: () => {
       message.success(isEdit ? "需求已更新" : "需求已创建");
@@ -191,8 +201,14 @@ export default function StoryDrawer({
           {
             key: "attach",
             label: "附件",
-            disabled: !story,
-            children: story ? <AttachmentList targetType="story" targetId={story.id} /> : null,
+            children: (
+              <AttachmentList
+                targetType="story"
+                targetId={story?.id ?? 0}
+                stagedFiles={story ? undefined : stagedFiles}
+                onStagedChange={story ? undefined : setStagedFiles}
+              />
+            ),
           },
           {
             key: "comments",

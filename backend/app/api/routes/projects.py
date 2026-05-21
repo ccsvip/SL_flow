@@ -91,9 +91,16 @@ async def update_project(
     response_class=Response,
     response_model=None,
 )
-async def delete_project(project_id: int, db: DBSession, _: CurrentUser):
+async def delete_project(project_id: int, db: DBSession, user: CurrentUser):
     project = await db.get(Project, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+    # Only the project owner or an admin can drop a project. Project deletion
+    # cascades to all stories/tasks/bugs - we don't let a random user nuke it.
+    if project.owner_id != user.id and user.role.value != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Only the project owner or admin may delete this project",
+        )
     await db.delete(project)
     await db.commit()

@@ -72,9 +72,13 @@ async def update_task(
     response_class=Response,
     response_model=None,
 )
-async def delete_task(task_id: int, db: DBSession, _: CurrentUser):
+async def delete_task(task_id: int, db: DBSession, user: CurrentUser):
     t = await db.get(Task, task_id)
     if not t:
         raise HTTPException(status_code=404, detail="Task not found")
+    if t.creator_id != user.id and user.role.value != "admin":
+        raise HTTPException(
+            status_code=403, detail="Only the creator or admin may delete this task"
+        )
     await db.delete(t)
     await db.commit()

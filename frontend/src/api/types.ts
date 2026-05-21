@@ -157,6 +157,7 @@ export interface SystemVersion {
     local_message?: string;
     local_author?: string;
     local_date?: string;
+    reason?: string;
   };
 }
 

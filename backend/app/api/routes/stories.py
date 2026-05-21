@@ -69,9 +69,13 @@ async def update_story(
     response_class=Response,
     response_model=None,
 )
-async def delete_story(story_id: int, db: DBSession, _: CurrentUser):
+async def delete_story(story_id: int, db: DBSession, user: CurrentUser):
     s = await db.get(Story, story_id)
     if not s:
         raise HTTPException(status_code=404, detail="Story not found")
+    if s.creator_id != user.id and user.role.value != "admin":
+        raise HTTPException(
+            status_code=403, detail="Only the creator or admin may delete this story"
+        )
     await db.delete(s)
     await db.commit()

@@ -16,7 +16,7 @@ import { DeleteOutlined, SaveOutlined } from "@ant-design/icons";
 import { useMutation } from "@tanstack/react-query";
 import dayjs from "dayjs";
 
-import { tasks } from "@/api/client";
+import { tasks, attachments } from "@/api/client";
 import { extractError } from "@/api/http";
 import { useProjectOptions, useUserOptions } from "@/hooks/options";
 import AttachmentList from "@/components/AttachmentList";
@@ -59,10 +59,12 @@ export default function TaskDrawer({
   const isEdit = !!task;
   const projectOpts = useProjectOptions();
   const userOpts = useUserOptions();
+  const [stagedFiles, setStagedFiles] = React.useState<File[]>([]);
 
   React.useEffect(() => {
     if (!open) return;
     form.resetFields();
+    setStagedFiles([]);
     if (task) {
       form.setFieldsValue({
         ...task,
@@ -90,7 +92,16 @@ export default function TaskDrawer({
       if (isEdit && task) {
         return tasks.update(task.id, payload);
       }
-      return tasks.create(payload);
+      const created = await tasks.create(payload);
+      // Submit any files staged before the parent existed.
+      if (stagedFiles.length > 0) {
+        try {
+          await attachments.upload("task", created.id, stagedFiles);
+        } catch {
+          message.warning("任务已创建，但部分附件上传失败，可在编辑页重新上传");
+        }
+      }
+      return created;
     },
     onSuccess: () => {
       message.success(isEdit ? "任务已更新" : "任务已创建");
@@ -202,8 +213,14 @@ export default function TaskDrawer({
           {
             key: "attach",
             label: "附件",
-            disabled: !task,
-            children: task ? <AttachmentList targetType="task" targetId={task.id} /> : null,
+            children: (
+              <AttachmentList
+                targetType="task"
+                targetId={task?.id ?? 0}
+                stagedFiles={task ? undefined : stagedFiles}
+                onStagedChange={task ? undefined : setStagedFiles}
+              />
+            ),
           },
           {
             key: "comments",

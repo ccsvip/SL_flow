@@ -35,9 +35,7 @@ export const users = {
     http.patch<User>(`/users/${id}`, data).then((r) => r.data),
   remove: (id: number) => http.delete(`/users/${id}`).then(() => true),
   resetPassword: (id: number, new_password: string) =>
-    http
-      .post(`/users/${id}/reset-password`, null, { params: { new_password } })
-      .then(() => true),
+    http.post(`/users/${id}/reset-password`, { new_password }).then(() => true),
 };
 
 // --- Projects ------------------------------------------------------------

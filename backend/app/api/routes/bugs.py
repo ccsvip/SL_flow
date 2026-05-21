@@ -70,9 +70,13 @@ async def update_bug(bug_id: int, payload: BugUpdate, db: DBSession, _: CurrentU
     response_class=Response,
     response_model=None,
 )
-async def delete_bug(bug_id: int, db: DBSession, _: CurrentUser):
+async def delete_bug(bug_id: int, db: DBSession, user: CurrentUser):
     b = await db.get(Bug, bug_id)
     if not b:
         raise HTTPException(status_code=404, detail="Bug not found")
+    if b.creator_id != user.id and user.role.value != "admin":
+        raise HTTPException(
+            status_code=403, detail="Only the creator or admin may delete this bug"
+        )
     await db.delete(b)
     await db.commit()

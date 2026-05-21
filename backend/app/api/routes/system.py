@@ -92,7 +92,7 @@ async def check_update(_: AdminUser) -> dict[str, Any]:
     remote_commit = remote_commit.strip()
     info["remote_commit"] = remote_commit
     info["remote_available"] = True
-    info["update_available"] = remote_commit and remote_commit != info.get("local_commit")
+    info["update_available"] = bool(remote_commit) and remote_commit != info.get("local_commit")
 
     if info["update_available"]:
         rc, out, _ = await _run(
@@ -122,28 +122,52 @@ async def check_update(_: AdminUser) -> dict[str, Any]:
 async def _do_pull_and_rebuild() -> None:
     """Background task: git pull and `docker compose up -d --build`.
 
-    Runs detached so we can return 202 to the client before the backend
-    container itself restarts.
+    The compose rebuild will recreate this very backend container, which
+    SIGKILLs the parent process - so we must spawn a fully-detached child
+    (new session, redirected stdio, nohup-style) that survives our death.
     """
     repo = settings.GIT_REPO_PATH
-    log_path = Path("/app/uploads/.last_update.log")
+    log_path = Path(settings.UPLOAD_DIR) / ".last_update.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    async def _log(msg: str) -> None:
+    def _log(msg: str) -> None:
         with log_path.open("a", encoding="utf-8") as fp:
             fp.write(msg + "\n")
 
-    await _log(f"=== update at {asyncio.get_event_loop().time()} ===")
+    _log(f"=== update started at {asyncio.get_event_loop().time()} ===")
+
+    # Step 1: git pull (synchronous, fast - we want to know if it failed).
     rc, out, err = await _run(["git", "pull", "--ff-only"], cwd=repo, timeout=180)
-    await _log(f"[git pull] rc={rc}\n{out}\n{err}")
+    _log(f"[git pull] rc={rc}\n{out}\n{err}")
     if rc != 0:
+        _log("[abort] git pull failed - skipping rebuild")
         return
 
-    # Rebuild via host docker (compose project name = directory basename or env COMPOSE_PROJECT_NAME).
-    rc, out, err = await _run(
-        ["docker", "compose", "up", "-d", "--build"], cwd=repo, timeout=600
+    # Step 2: compose up -d --build, detached so we survive being killed.
+    # We invoke a shell snippet wrapped in `setsid` (new session, no parent
+    # process group) and `nohup` (ignore SIGHUP). stdout/stderr go to the
+    # log file so we can debug after the backend container restarts.
+    detached_cmd = (
+        f"setsid nohup sh -c 'cd {shlex.quote(repo)} && "
+        f"echo \"[detached] starting rebuild at $(date -Iseconds)\" >> {shlex.quote(str(log_path))} && "
+        f"docker compose up -d --build >> {shlex.quote(str(log_path))} 2>&1; "
+        f"echo \"[detached] rebuild exit=$?\" >> {shlex.quote(str(log_path))}' "
+        f"</dev/null >/dev/null 2>&1 &"
     )
-    await _log(f"[compose up] rc={rc}\n{out}\n{err}")
+    _log(f"[spawn] {detached_cmd}")
+    proc = await asyncio.create_subprocess_shell(
+        detached_cmd,
+        stdout=asyncio.subprocess.DEVNULL,
+        stderr=asyncio.subprocess.DEVNULL,
+        stdin=asyncio.subprocess.DEVNULL,
+    )
+    # Don't await proc - the shell snippet backgrounds the real work and
+    # returns immediately. We just log that we kicked it off.
+    try:
+        await asyncio.wait_for(proc.wait(), timeout=5)
+    except asyncio.TimeoutError:
+        pass  # That's OK; the wrapper shell shouldn't hang anyway.
+    _log("[spawn] detached rebuild kicked off; this container will be replaced shortly.")
 
 
 @router.post("/apply-update", status_code=status.HTTP_202_ACCEPTED)
@@ -152,17 +176,20 @@ async def apply_update(_: AdminUser, bg: BackgroundTasks) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail="Hot reload disabled")
     repo = settings.GIT_REPO_PATH
     if not Path(repo, ".git").exists():
-        raise HTTPException(status_code=400, detail="Not a git working tree")
+        raise HTTPException(
+            status_code=400,
+            detail="Not a git working tree at GIT_REPO_PATH. The hot-update feature requires the project to be cloned via git, not unzipped.",
+        )
     bg.add_task(_do_pull_and_rebuild)
     return {
         "status": "scheduled",
-        "message": "Update started in background. The backend will rebuild and restart shortly.",
+        "message": "Update scheduled in background. The backend will rebuild and restart shortly. Refresh the page in 30-90 seconds.",
     }
 
 
 @router.get("/update-log")
 async def update_log(_: AdminUser) -> dict[str, str]:
-    log_path = Path("/app/uploads/.last_update.log")
+    log_path = Path(settings.UPLOAD_DIR) / ".last_update.log"
     if not log_path.is_file():
         return {"log": ""}
     return {"log": log_path.read_text(encoding="utf-8", errors="ignore")[-8000:]}

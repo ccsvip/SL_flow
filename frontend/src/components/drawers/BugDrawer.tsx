@@ -12,7 +12,7 @@ import {
 import { DeleteOutlined, SaveOutlined } from "@ant-design/icons";
 import { useMutation } from "@tanstack/react-query";
 
-import { bugs } from "@/api/client";
+import { bugs, attachments } from "@/api/client";
 import { extractError } from "@/api/http";
 import { useProjectOptions, useUserOptions } from "@/hooks/options";
 import AttachmentList from "@/components/AttachmentList";
@@ -62,10 +62,12 @@ export default function BugDrawer({
   const isEdit = !!bug;
   const projectOpts = useProjectOptions();
   const userOpts = useUserOptions();
+  const [stagedFiles, setStagedFiles] = React.useState<File[]>([]);
 
   React.useEffect(() => {
     if (!open) return;
     form.resetFields();
+    setStagedFiles([]);
     if (bug) {
       form.setFieldsValue({ ...bug, assignee_id: bug.assignee?.id ?? null });
     } else {
@@ -82,7 +84,15 @@ export default function BugDrawer({
     mutationFn: async () => {
       const v = await form.validateFields();
       if (isEdit && bug) return bugs.update(bug.id, v);
-      return bugs.create(v);
+      const created = await bugs.create(v);
+      if (stagedFiles.length > 0) {
+        try {
+          await attachments.upload("bug", created.id, stagedFiles);
+        } catch {
+          message.warning("缺陷已创建，但部分附件上传失败，可在编辑页重新上传");
+        }
+      }
+      return created;
     },
     onSuccess: () => {
       message.success(isEdit ? "缺陷已更新" : "缺陷已创建");
@@ -156,7 +166,7 @@ export default function BugDrawer({
                   <Input.TextArea rows={3} />
                 </Form.Item>
                 <Form.Item label="复现步骤" name="steps_to_reproduce">
-                  <Input.TextArea rows={3} placeholder="1. ...\n2. ...\n3. ..." />
+                  <Input.TextArea rows={3} placeholder={"1. ...\n2. ...\n3. ..."} />
                 </Form.Item>
                 <Space style={{ display: "flex", gap: 8 }}>
                   <Form.Item label="期望结果" name="expected_result" style={{ flex: 1 }}>
@@ -203,8 +213,14 @@ export default function BugDrawer({
           {
             key: "attach",
             label: "附件",
-            disabled: !bug,
-            children: bug ? <AttachmentList targetType="bug" targetId={bug.id} /> : null,
+            children: (
+              <AttachmentList
+                targetType="bug"
+                targetId={bug?.id ?? 0}
+                stagedFiles={bug ? undefined : stagedFiles}
+                onStagedChange={bug ? undefined : setStagedFiles}
+              />
+            ),
           },
           {
             key: "comments",

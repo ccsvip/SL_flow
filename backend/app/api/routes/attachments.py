@@ -17,11 +17,28 @@ from app.schemas.attachment import AttachmentOut
 
 router = APIRouter(prefix="/attachments", tags=["attachments"])
 
-ALLOWED_MIME_PREFIXES = ("image/", "video/")
+# Strict allowlist - we explicitly forbid SVG (XSS via <script> in SVG) and
+# any other "image/*" or "video/*" type that's a known foot-gun. Anything
+# the browser cannot natively render safely is excluded.
+ALLOWED_MIMES: set[str] = {
+    # images
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+    "image/avif",
+    "image/bmp",
+    # videos
+    "video/mp4",
+    "video/webm",
+    "video/quicktime",
+    "video/x-msvideo",  # avi
+    "video/x-matroska",  # mkv
+}
 
 
 def _is_allowed(mime: str) -> bool:
-    return any(mime.startswith(p) for p in ALLOWED_MIME_PREFIXES)
+    return mime.lower() in ALLOWED_MIMES
 
 
 def _decorate(att: Attachment) -> AttachmentOut:
@@ -75,7 +92,10 @@ async def upload_attachments(
         if not _is_allowed(mime):
             raise HTTPException(
                 status_code=400,
-                detail=f"Unsupported file type: {mime} (only image/* and video/* allowed)",
+                detail=(
+                    f"Unsupported file type: {mime}. "
+                    f"Allowed: {', '.join(sorted(ALLOWED_MIMES))}"
+                ),
             )
 
         # Stream to disk with a random prefix to avoid collisions; preserve original filename.
@@ -120,10 +140,23 @@ async def download_attachment(attachment_id: int, db: DBSession, _: CurrentUser)
     full = settings.upload_path / att.storage_path
     if not full.is_file():
         raise HTTPException(status_code=410, detail="Attachment file is missing on disk")
+
+    # Defense-in-depth: even though we validated mime on upload, refuse to
+    # serve anything that's not in the allowlist any more (e.g. files left
+    # over from older lax versions).
+    media_type = att.mime_type if _is_allowed(att.mime_type) else "application/octet-stream"
+
     return FileResponse(
         path=full,
-        media_type=att.mime_type,
+        media_type=media_type,
         filename=att.filename,
+        headers={
+            # Prevent browser from rendering the response in a way that could
+            # execute scripts (mostly relevant for any future content types we
+            # add). Force inline so <img>/<video> still preview through axios.
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; sandbox",
+        },
     )
 
 

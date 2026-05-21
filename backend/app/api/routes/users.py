@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Response, status
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.api.deps import AdminUser, CurrentUser, DBSession
@@ -9,6 +10,10 @@ from app.models.user import User, UserRole
 from app.schemas.user import UserCreate, UserOut, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+
+class ResetPasswordIn(BaseModel):
+    new_password: str = Field(min_length=4, max_length=72)
 
 
 @router.get("", response_model=list[UserOut])
@@ -86,14 +91,12 @@ async def delete_user(user_id: int, db: DBSession, admin: AdminUser):
 )
 async def reset_password(
     user_id: int,
+    payload: ResetPasswordIn,
     db: DBSession,
     _: AdminUser,
-    new_password: str = "changeme",
 ):
     user = await db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    if len(new_password) < 4:
-        raise HTTPException(status_code=400, detail="Password too short")
-    user.hashed_password = hash_password(new_password)
+    user.hashed_password = hash_password(payload.new_password)
     await db.commit()
