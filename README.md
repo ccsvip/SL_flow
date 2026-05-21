@@ -22,23 +22,45 @@ A modern, ZenTao-inspired project & task management platform.
 ## Quick Start
 
 ```bash
-# 1. Generate a strong JWT secret (the backend refuses to boot without one)
-python -c "import secrets; print('SECRET_KEY=' + secrets.token_urlsafe(48))" > .env
-# 2. Append the rest of the defaults
-cat .env.example | grep -v '^SECRET_KEY=' >> .env
-# 3. Boot the stack
+# 1. Create .env from the example
+cp .env.example .env
+
+# 2. Generate a strong JWT secret (the backend refuses to boot without one)
+#    Replace the SECRET_KEY=replace-me-* line in .env with the output of:
+python -c "import secrets; print('SECRET_KEY=' + secrets.token_urlsafe(48))"
+
+# 3. Set HOST_REPO_PATH in .env to the ABSOLUTE host path of this repo,
+#    e.g. /srv/slflow on Linux, or C:\code\mine\SL_flow on Windows.
+#    This is required for the hot-update feature to mount the right source
+#    when it spawns the updater sibling container.
+
+# 4. Boot the stack
 docker compose up -d --build
 ```
 
 Then open http://localhost:8080 and log in with `admin / admin`.
 
+> **Windows PowerShell users:** the `>` redirection writes UTF-16 LE which
+> can confuse some shells. Either use git-bash / WSL for the secret-generation
+> step, or run it inside the container after the first build:
+> `docker compose run --rm backend python -c "import secrets; print(secrets.token_urlsafe(48))"`
+
 ## Hot Update
 
-The backend container mounts the project directory and the host docker socket.
-When the user clicks "check for update" the backend runs `git fetch` against the
-working tree at `/workspace`, compares `HEAD` to `origin/<branch>`, and on
-confirmation runs `git pull` and triggers `docker compose up -d --build` against
-the host daemon. Disable by setting `ENABLE_HOT_RELOAD=false`.
+The backend container mounts the host docker socket (`/var/run/docker.sock`) and
+the project directory (`./` → `/workspace`). Clicking **「立即应用更新」** in
+the UI triggers:
+
+1. `git pull --ff-only` inside the backend container against `/workspace`.
+2. Spawn of a sibling container `slflow-updater` (image `docker:27.5.1-cli`)
+   that owns the orchestration. The sibling is given the **host** repo path
+   (from `HOST_REPO_PATH`) and the original `COMPOSE_PROJECT_NAME` so its
+   `docker compose up -d --build` targets the same running stack.
+3. The sibling rebuilds and recreates the backend & frontend containers. When
+   our backend dies mid-build, the sibling survives in its own pid namespace
+   and finishes the job.
+
+Disable by setting `ENABLE_HOT_RELOAD=false`.
 
 ## Default Ports
 

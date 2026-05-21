@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import shlex
 from pathlib import Path
@@ -119,75 +120,181 @@ async def check_update(_: AdminUser) -> dict[str, Any]:
     return info
 
 
+async def _resolve_host_repo_path() -> str | None:
+    """Find the HOST filesystem path of the repo so the sibling updater
+    container can bind-mount it correctly via the docker socket.
+
+    Strategy:
+      1. Use $HOST_REPO_PATH if explicitly provided in env (preferred path).
+      2. Fall back to `docker inspect $HOSTNAME` and read the Source of the
+         mount whose Destination is /workspace.
+      3. Return None if both fail (caller will refuse to schedule an update).
+    """
+    explicit = os.environ.get("HOST_REPO_PATH", "").strip()
+    if explicit:
+        return explicit
+
+    container_id = os.environ.get("HOSTNAME", "").strip()
+    if not container_id:
+        return None
+
+    rc, out, _ = await _run(
+        ["docker", "inspect", container_id], timeout=10
+    )
+    if rc != 0 or not out.strip():
+        return None
+
+    try:
+        info = json.loads(out)
+        if not info:
+            return None
+        mounts = info[0].get("Mounts", []) or []
+        for m in mounts:
+            if m.get("Destination") == "/workspace":
+                src = m.get("Source") or ""
+                return src or None
+    except (ValueError, KeyError, IndexError):
+        return None
+    return None
+
+
+async def _resolve_compose_project_name() -> str:
+    """Pin the compose project name so the sibling updater targets the
+    SAME running stack instead of creating a parallel "workspace" project.
+
+    Order: $COMPOSE_PROJECT_NAME env -> docker inspect label -> "slflow".
+    """
+    explicit = os.environ.get("COMPOSE_PROJECT_NAME", "").strip()
+    if explicit:
+        return explicit
+
+    container_id = os.environ.get("HOSTNAME", "").strip()
+    if container_id:
+        rc, out, _ = await _run(["docker", "inspect", container_id], timeout=10)
+        if rc == 0 and out.strip():
+            try:
+                info = json.loads(out)
+                if info:
+                    labels = info[0].get("Config", {}).get("Labels", {}) or {}
+                    name = labels.get("com.docker.compose.project")
+                    if name:
+                        return name
+            except (ValueError, KeyError, IndexError):
+                pass
+    return "slflow"
+
+
 async def _do_pull_and_rebuild() -> None:
     """Background task: git pull and `docker compose up -d --build`.
 
     The compose rebuild will recreate this very backend container, which
-    SIGKILLs every PID inside the container's namespace (pid 1 dies, kernel
-    cleans the namespace, all descendants die regardless of session/group).
-    `setsid` + `nohup` are NOT enough - they detach from the parent process,
-    not from the container's pid namespace.
+    SIGKILLs every PID inside the container's namespace. `setsid` + `nohup`
+    cannot save us - they detach from the parent process, not from the
+    container's pid namespace.
 
     Solution: spawn the rebuild from a SIBLING docker container that lives
-    in its own pid namespace. The host docker daemon is what holds the
-    sibling, and the sibling holds the compose orchestration. When this
-    backend container dies, the sibling survives, finishes the rebuild,
-    and the new backend comes up.
+    in its own pid namespace. The host docker daemon owns that sibling, so
+    when this backend container dies, the sibling survives, finishes the
+    rebuild, and the new backend comes up.
+
+    Critical correctness requirements (otherwise the sibling rebuilds the
+    WRONG thing or nothing at all):
+      - Bind-mount the HOST repo path, not /workspace from inside this
+        container (the host daemon resolves paths in the host filesystem).
+      - Pass COMPOSE_PROJECT_NAME so the sibling's `docker compose up`
+        targets the same stack instead of a parallel "workspace" one.
     """
     repo = settings.GIT_REPO_PATH
     log_path = Path(settings.UPLOAD_DIR) / ".last_update.log"
+    lock_path = Path(settings.UPLOAD_DIR) / ".update.lock"
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
     def _log(msg: str) -> None:
         with log_path.open("a", encoding="utf-8") as fp:
             fp.write(msg + "\n")
 
-    _log(f"=== update started at {asyncio.get_event_loop().time()} ===")
+    # Lock so two admins clicking "apply-update" within seconds don't
+    # collide. Stale locks (older than 15 min) are reclaimed.
+    if lock_path.exists():
+        try:
+            age = asyncio.get_event_loop().time() - lock_path.stat().st_mtime
+        except OSError:
+            age = 0
+        if age < 900:
+            _log("[abort] another update is already in progress")
+            return
+        lock_path.unlink(missing_ok=True)
+    lock_path.write_text(str(asyncio.get_event_loop().time()))
 
-    # Step 1: git pull (synchronous, fast - we want to know if it failed).
-    rc, out, err = await _run(["git", "pull", "--ff-only"], cwd=repo, timeout=180)
-    _log(f"[git pull] rc={rc}\n{out}\n{err}")
-    if rc != 0:
-        _log("[abort] git pull failed - skipping rebuild")
-        return
+    try:
+        _log(f"=== update started at {asyncio.get_event_loop().time()} ===")
 
-    # Step 2: spawn a sibling container that owns the orchestration.
-    # We need the same compose project name so it recreates _this_ stack,
-    # not a fresh one. Compose derives the project name from the working
-    # directory's basename, so we mount the host repo at the same path.
-    inner_script = (
-        f"echo '[updater] starting at $(date -Iseconds)' >> /workspace/.last_update.log && "
-        f"cd /workspace && "
-        f"docker compose up -d --build >> /workspace/.last_update.log 2>&1; "
-        f"rc=$?; "
-        f"echo \"[updater] docker compose up exit=$rc at $(date -Iseconds)\" >> /workspace/.last_update.log"
-    )
-    sibling_cmd = [
-        "docker",
-        "run",
-        "--rm",
-        "-d",
-        "--name",
-        "slflow-updater",
-        "-v",
-        "/var/run/docker.sock:/var/run/docker.sock",
-        "-v",
-        f"{repo}:/workspace",
-        "-w",
-        "/workspace",
-        "docker:27-cli",
-        "sh",
-        "-c",
-        inner_script,
-    ]
+        # 1. git pull (synchronous, fast).
+        rc, out, err = await _run(["git", "pull", "--ff-only"], cwd=repo, timeout=180)
+        _log(f"[git pull] rc={rc}\n{out}\n{err}")
+        if rc != 0:
+            _log("[abort] git pull failed - skipping rebuild")
+            return
 
-    # Best-effort: kill any leftover updater container from a previous run.
-    await _run(["docker", "rm", "-f", "slflow-updater"], timeout=10)
+        # 2. Discover host paths and project name (so the sibling targets
+        # exactly this running stack).
+        host_repo = await _resolve_host_repo_path()
+        if not host_repo:
+            _log(
+                "[abort] cannot resolve HOST_REPO_PATH - set it in .env "
+                "(absolute host path of the repo) or grant docker socket "
+                "access so we can inspect ourselves."
+            )
+            return
+        project = await _resolve_compose_project_name()
+        _log(f"[spawn] host_repo={host_repo} project={project}")
 
-    rc, out, err = await _run(sibling_cmd, timeout=60)
-    _log(f"[spawn] docker run rc={rc} sibling_id={out.strip()[:12]}\n{err}")
-    if rc != 0:
-        _log("[abort] failed to spawn updater sibling")
+        # Best-effort: kill any leftover updater container from a previous run.
+        await _run(["docker", "rm", "-f", "slflow-updater"], timeout=10)
+
+        # 3. Spawn the sibling. It runs `docker compose up -d --build` against
+        # the same project as the running stack. When this backend container
+        # is recreated mid-rebuild, the sibling keeps going.
+        inner_script = (
+            "echo \"[updater] starting at $(date -Iseconds)\" >> /workspace/.last_update.log && "
+            "cd /workspace && "
+            "docker compose up -d --build >> /workspace/.last_update.log 2>&1; "
+            "rc=$?; "
+            "echo \"[updater] docker compose up exit=$rc at $(date -Iseconds)\" >> /workspace/.last_update.log; "
+            "exit $rc"
+        )
+        sibling_cmd = [
+            "docker",
+            "run",
+            "--rm",
+            "-d",
+            "--name",
+            "slflow-updater",
+            "-e",
+            f"COMPOSE_PROJECT_NAME={project}",
+            "-v",
+            "/var/run/docker.sock:/var/run/docker.sock",
+            "-v",
+            f"{host_repo}:/workspace",
+            "-w",
+            "/workspace",
+            # Pin minor for stability; bump explicitly when you need a newer
+            # compose plugin. The official `docker` image bundles the
+            # docker-compose-plugin since 24.x.
+            "docker:27.5.1-cli",
+            "sh",
+            "-c",
+            inner_script,
+        ]
+
+        rc, out, err = await _run(sibling_cmd, timeout=60)
+        _log(f"[spawn] docker run rc={rc} sibling_id={out.strip()[:12]}\n{err}")
+        if rc != 0:
+            _log("[abort] failed to spawn updater sibling")
+    finally:
+        # The sibling lives past us; remove the lock so future updates can
+        # proceed once the new backend boots.
+        lock_path.unlink(missing_ok=True)
 
 
 @router.post("/apply-update", status_code=status.HTTP_202_ACCEPTED)

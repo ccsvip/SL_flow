@@ -37,6 +37,12 @@ services:
       GIT_REPO_PATH: /workspace
       ENABLE_HOT_RELOAD: ${ENABLE_HOT_RELOAD:-true}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      # Hot-update needs the HOST repo path (not the in-container path) so
+      # the sibling updater container mounts the right source via the docker
+      # socket. Also pin the compose project name so the sibling targets the
+      # SAME stack rather than creating a "workspace" parallel stack.
+      HOST_REPO_PATH: ${HOST_REPO_PATH:-}
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-slflow}
     volumes:
       - uploads:/app/uploads
       # Mount the host project root to allow git pull / docker rebuild from inside.
