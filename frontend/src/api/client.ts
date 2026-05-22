@@ -20,6 +20,18 @@ import type {
   DBBackup,
   DBBackupPage,
   NotificationsPage,
+  PRDConvertResult,
+  PRDDocument,
+  PRDDocumentSummary,
+  PRDDocumentUpdate,
+  PRDGenerateInput,
+  PRDRequirement,
+  PRDRequirementCreate,
+  PRDRequirementUpdate,
+  PRDSectionRegenerateResult,
+  PRDStatus,
+  PRDTemplate,
+  PRDTemplateInfo,
   Project,
   RestoreResult,
   Story,
@@ -190,6 +202,90 @@ export const ai = {
     http.put<AIConfig>("/ai/config", data).then((r) => r.data),
   testConnection: (data: { base_url?: string; api_key?: string; model?: string }) =>
     http.post<AITestResult>("/ai/test", data).then((r) => r.data),
+};
+
+// --- PRD -----------------------------------------------------------------
+export const prd = {
+  templates: () => http.get<PRDTemplateInfo[]>("/prd/templates").then((r) => r.data),
+
+  list: (params?: {
+    q?: string;
+    template?: PRDTemplate;
+    status?: PRDStatus;
+    project_id?: number;
+    mine?: boolean;
+  }) => http.get<PRDDocumentSummary[]>("/prd/documents", { params }).then((r) => r.data),
+
+  get: (id: number) =>
+    http.get<PRDDocument>(`/prd/documents/${id}`).then((r) => r.data),
+
+  generate: (data: PRDGenerateInput) =>
+    http.post<PRDDocument>("/prd/documents", data).then((r) => r.data),
+
+  update: (id: number, data: PRDDocumentUpdate) =>
+    http.patch<PRDDocument>(`/prd/documents/${id}`, data).then((r) => r.data),
+
+  remove: (id: number) =>
+    http.delete(`/prd/documents/${id}`).then(() => true),
+
+  regenerate: (id: number, extra_instruction?: string) =>
+    http
+      .post<PRDDocument>(`/prd/documents/${id}/regenerate`, { extra_instruction })
+      .then((r) => r.data),
+
+  regenerateSection: (
+    id: number,
+    section_slug: string,
+    extra_instruction?: string,
+  ) =>
+    http
+      .post<PRDSectionRegenerateResult>(
+        `/prd/documents/${id}/sections/regenerate`,
+        { section_slug, extra_instruction },
+      )
+      .then((r) => r.data),
+
+  reextract: (id: number) =>
+    http
+      .post<{ requirements: PRDRequirement[] }>(`/prd/documents/${id}/extract`)
+      .then((r) => r.data.requirements),
+
+  convertToStories: (
+    id: number,
+    project_id: number,
+    requirement_ids?: number[],
+  ) =>
+    http
+      .post<PRDConvertResult>(`/prd/documents/${id}/convert-to-stories`, {
+        project_id,
+        requirement_ids,
+      })
+      .then((r) => r.data),
+
+  exportUrl: (id: number, fmt: "markdown" | "html" = "markdown") =>
+    `/prd/documents/${id}/export?fmt=${fmt}`,
+
+  exportBlob: async (id: number, fmt: "markdown" | "html" = "markdown") => {
+    const r = await http.get<Blob>(`/prd/documents/${id}/export`, {
+      params: { fmt },
+      responseType: "blob",
+    });
+    return r;
+  },
+
+  // Requirement-pool CRUD ------------------------------------------------
+  addRequirement: (doc_id: number, data: PRDRequirementCreate) =>
+    http
+      .post<PRDRequirement>(`/prd/documents/${doc_id}/requirements`, data)
+      .then((r) => r.data),
+
+  updateRequirement: (req_id: number, data: PRDRequirementUpdate) =>
+    http
+      .patch<PRDRequirement>(`/prd/requirements/${req_id}`, data)
+      .then((r) => r.data),
+
+  removeRequirement: (req_id: number) =>
+    http.delete(`/prd/requirements/${req_id}`).then(() => true),
 };
 
 // --- System --------------------------------------------------------------

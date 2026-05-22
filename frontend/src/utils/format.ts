@@ -62,6 +62,10 @@ const STATUS_ZH: Record<string, string> = {
   medium: "中",
   high: "高",
   urgent: "紧急",
+  // audit / db backup target types
+  db_backup: "数据备份",
+  backup_setting: "备份设置",
+  prd: "PRD",
 };
 
 export function zh(value?: string | null): string {

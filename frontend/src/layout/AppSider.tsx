@@ -13,6 +13,7 @@ import {
   CloudSyncOutlined,
   HistoryOutlined,
   ThunderboltOutlined,
+  ReadOutlined,
 } from "@ant-design/icons";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -31,6 +32,7 @@ export default function AppSider() {
     const base = [
       { key: "/", icon: <DashboardOutlined />, label: "工作台" },
       { key: "/projects", icon: <ProjectOutlined />, label: "项目" },
+      { key: "/prd", icon: <ReadOutlined />, label: "PRD 文档" },
       { key: "/stories", icon: <FileTextOutlined />, label: "需求" },
       { key: "/tasks", icon: <CheckSquareOutlined />, label: "任务" },
       { key: "/bugs", icon: <BugOutlined />, label: "缺陷" },
@@ -43,8 +45,8 @@ export default function AppSider() {
       // Admin-only entries: user management + backups before audit logs,
       // and AI settings between settings and version-and-update so it
       // sits with the other "platform" controls.
-      base.splice(6, 0, { key: "/users", icon: <TeamOutlined />, label: "用户管理" });
-      base.splice(7, 0, { key: "/backups", icon: <DatabaseOutlined />, label: "数据备份" });
+      base.splice(7, 0, { key: "/users", icon: <TeamOutlined />, label: "用户管理" });
+      base.splice(8, 0, { key: "/backups", icon: <DatabaseOutlined />, label: "数据备份" });
       base.splice(
         base.length - 1,
         0,

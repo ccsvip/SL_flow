@@ -19,6 +19,8 @@ import AISettingsPage from "@/pages/AISettingsPage";
 import SystemPage from "@/pages/SystemPage";
 import AuditLogsPage from "@/pages/AuditLogsPage";
 import BackupsPage from "@/pages/BackupsPage";
+import PRDListPage from "@/pages/PRDListPage";
+import PRDDetailPage from "@/pages/PRDDetailPage";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { token, hydrated } = useAuthStore();
@@ -67,6 +69,8 @@ export default function App() {
         <Route path="stories" element={<StoriesPage />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="bugs" element={<BugsPage />} />
+        <Route path="prd" element={<PRDListPage />} />
+        <Route path="prd/:id" element={<PRDDetailPage />} />
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route

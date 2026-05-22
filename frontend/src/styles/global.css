@@ -262,3 +262,192 @@ a {
   align-items: center;
   justify-content: center;
 }
+
+/* PRD markdown view */
+.slf-md {
+  color: var(--md-fg, #1f2933);
+  line-height: 1.75;
+  font-size: 14px;
+  word-break: break-word;
+}
+.slf-md h1,
+.slf-md h2,
+.slf-md h3,
+.slf-md h4 {
+  font-weight: 700;
+  margin: 28px 0 12px;
+  line-height: 1.4;
+}
+.slf-md h1 {
+  font-size: 26px;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 8px;
+}
+.slf-md h2 {
+  font-size: 20px;
+  padding-left: 10px;
+  border-left: 4px solid var(--accent);
+}
+.slf-md h3 {
+  font-size: 16px;
+}
+.slf-md h4 {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.7);
+}
+[data-theme="dark"] .slf-md h4 {
+  color: rgba(255, 255, 255, 0.7);
+}
+.slf-md p {
+  margin: 8px 0;
+}
+.slf-md ul,
+.slf-md ol {
+  margin: 8px 0 8px 8px;
+  padding-left: 22px;
+}
+.slf-md li {
+  margin: 4px 0;
+}
+.slf-md code {
+  background: rgba(125, 125, 140, 0.18);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 90%;
+}
+.slf-md pre.slf-md-code {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 14px 16px;
+  border-radius: 8px;
+  overflow: auto;
+  font-size: 13px;
+  margin: 12px 0;
+  position: relative;
+}
+.slf-md pre.slf-md-code code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+  white-space: pre;
+}
+.slf-md pre.slf-md-code code[data-lang]:not([data-lang=""])::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 6px;
+  right: 12px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.55);
+}
+.slf-md blockquote {
+  border-left: 4px solid rgba(125, 125, 140, 0.4);
+  padding: 4px 14px;
+  margin: 12px 0;
+  color: rgba(0, 0, 0, 0.6);
+  background: rgba(125, 125, 140, 0.08);
+  border-radius: 4px;
+}
+[data-theme="dark"] .slf-md blockquote {
+  color: rgba(255, 255, 255, 0.7);
+}
+.slf-md hr {
+  border: none;
+  border-top: 1px dashed rgba(125, 125, 140, 0.4);
+  margin: 24px 0;
+}
+.slf-md a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.slf-md-table-wrap {
+  overflow-x: auto;
+  margin: 12px 0;
+  border-radius: 8px;
+  border: 1px solid rgba(125, 125, 140, 0.25);
+}
+.slf-md table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+.slf-md th,
+.slf-md td {
+  border-bottom: 1px solid rgba(125, 125, 140, 0.2);
+  border-right: 1px solid rgba(125, 125, 140, 0.2);
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+.slf-md th {
+  background: rgba(125, 125, 140, 0.12);
+  font-weight: 600;
+}
+.slf-md tr:last-child td {
+  border-bottom: none;
+}
+.slf-md th:last-child,
+.slf-md td:last-child {
+  border-right: none;
+}
+[data-theme="dark"] .slf-md {
+  --md-fg: rgba(255, 255, 255, 0.86);
+}
+
+/* PRD section card hover-affordances */
+.slf-prd-section {
+  position: relative;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: background 0.18s ease;
+}
+.slf-prd-section:hover {
+  background: rgba(22, 119, 255, 0.05);
+}
+.slf-prd-section:hover .slf-prd-section-actions {
+  opacity: 1;
+}
+.slf-prd-section-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+/* PRD template gallery card */
+.slf-prd-tpl-card {
+  border-radius: 14px;
+  padding: 16px 18px;
+  cursor: pointer;
+  border: 1.5px solid rgba(125, 125, 140, 0.18);
+  background: var(--card-bg, #fff);
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+}
+.slf-prd-tpl-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: 0 10px 24px rgba(22, 119, 255, 0.15);
+}
+.slf-prd-tpl-card.is-selected {
+  border-color: var(--accent);
+  background: linear-gradient(
+    135deg,
+    rgba(22, 119, 255, 0.06),
+    rgba(114, 46, 209, 0.06)
+  );
+  box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.15);
+}
+[data-theme="dark"] .slf-prd-tpl-card {
+  --card-bg: #161c25;
+}

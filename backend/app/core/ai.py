@@ -115,13 +115,20 @@ async def chat_completion(
     system: str,
     user: str,
     temperature: float = 0.4,
+    max_tokens: Optional[int] = None,
 ) -> str:
     """Low-level call. Used by both `summarize()` and the connectivity test
-    route. Raises AIDisabledError / AIRequestError appropriately."""
+    route. Raises AIDisabledError / AIRequestError appropriately.
+
+    `max_tokens` is forwarded to the upstream when provided. Most OpenAI-
+    compatible providers default to a fairly small cap (4K) which is fine
+    for chat summaries but truncates a full PRD generation - callers that
+    need a long body pass an explicit value.
+    """
     if not is_enabled(rt):
         raise AIDisabledError("AI feature is not configured")
 
-    payload = {
+    payload: dict = {
         "model": rt.model,
         "messages": [
             {"role": "system", "content": system},
@@ -130,6 +137,8 @@ async def chat_completion(
         "temperature": temperature,
         "stream": False,
     }
+    if max_tokens is not None:
+        payload["max_tokens"] = max_tokens
     headers = {
         "Authorization": f"Bearer {rt.api_key}",
         "Content-Type": "application/json",

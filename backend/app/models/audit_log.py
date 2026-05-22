@@ -31,6 +31,7 @@ class AuditTargetType(str, enum.Enum):
     auth = "auth"
     db_backup = "db_backup"
     backup_setting = "backup_setting"
+    prd = "prd"
 
 
 class AuditLog(Base):

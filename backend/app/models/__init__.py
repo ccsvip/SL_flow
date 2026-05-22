@@ -13,6 +13,14 @@ from app.models.notification import (
     NotificationTargetType,
 )
 from app.models.ai_setting import AISetting
+from app.models.prd import (
+    PRDDocument,
+    PRDRequirement,
+    PRDTemplate,
+    PRDSourceType,
+    PRDStatus,
+    PRDPriority,
+)
 
 __all__ = [
     "User",
@@ -43,4 +51,10 @@ __all__ = [
     "NotificationKind",
     "NotificationTargetType",
     "AISetting",
+    "PRDDocument",
+    "PRDRequirement",
+    "PRDTemplate",
+    "PRDSourceType",
+    "PRDStatus",
+    "PRDPriority",
 ]

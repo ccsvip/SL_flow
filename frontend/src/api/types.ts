@@ -199,7 +199,10 @@ export type AuditTargetType =
   | "comment"
   | "attachment"
   | "user"
-  | "auth";
+  | "auth"
+  | "db_backup"
+  | "backup_setting"
+  | "prd";
 
 export interface AuditActor {
   id: number;
@@ -385,4 +388,128 @@ export interface AITestResult {
   message: string;
   sample: string | null;
   model: string | null;
+}
+
+// PRD ----------------------------------------------------------------------
+
+export type PRDTemplate =
+  | "software_project"
+  | "mini_program"
+  | "app"
+  | "admin_system"
+  | "ai_app"
+  | "digital_human"
+  | "tob_delivery";
+
+export type PRDSourceType =
+  | "one_liner"
+  | "chat_log"
+  | "customer_feedback"
+  | "manual";
+
+export type PRDStatus = "draft" | "generating" | "ready" | "archived";
+
+export type PRDPriority = "low" | "medium" | "high" | "urgent";
+
+export interface PRDTemplateSection {
+  slug: string;
+  title: string;
+  hint: string;
+}
+
+export interface PRDTemplateInfo {
+  template: PRDTemplate;
+  label: string;
+  description: string;
+  tone: string;
+  sections: PRDTemplateSection[];
+}
+
+export interface PRDRequirement {
+  id: number;
+  document_id: number;
+  order_index: number;
+  title: string;
+  description: string | null;
+  acceptance_criteria: string | null;
+  priority: PRDPriority;
+  category: string | null;
+  tag: string | null;
+  converted_story_id: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PRDDocumentSummary {
+  id: number;
+  title: string;
+  template: PRDTemplate;
+  source_type: PRDSourceType;
+  status: PRDStatus;
+  summary: string | null;
+  suggested_project_name: string | null;
+  suggested_project_code: string | null;
+  project_id: number | null;
+  creator: User | null;
+  generated_model: string | null;
+  last_generation_truncated: boolean;
+  requirement_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PRDDocument extends PRDDocumentSummary {
+  content: string;
+  source_input: string | null;
+  requirements: PRDRequirement[];
+}
+
+export interface PRDGenerateInput {
+  template: PRDTemplate;
+  source_type: PRDSourceType;
+  source_input: string;
+  title?: string;
+  extra_instruction?: string;
+  project_id?: number;
+}
+
+export interface PRDDocumentUpdate {
+  title?: string;
+  content?: string;
+  summary?: string;
+  suggested_project_name?: string;
+  suggested_project_code?: string;
+  project_id?: number | null;
+  status?: PRDStatus;
+}
+
+export interface PRDSectionRegenerateResult {
+  section_slug: string;
+  new_section_body: string;
+  new_content: string;
+}
+
+export interface PRDConvertResult {
+  created_story_ids: number[];
+  skipped_requirement_ids: number[];
+}
+
+export interface PRDRequirementUpdate {
+  title?: string;
+  description?: string;
+  acceptance_criteria?: string;
+  priority?: PRDPriority;
+  category?: string;
+  tag?: string;
+  order_index?: number;
+}
+
+export interface PRDRequirementCreate {
+  title: string;
+  description?: string;
+  acceptance_criteria?: string;
+  priority?: PRDPriority;
+  category?: string;
+  tag?: string;
+  order_index?: number;
 }
