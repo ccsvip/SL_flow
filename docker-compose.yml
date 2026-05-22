@@ -41,6 +41,15 @@ services:
       # Optional: GitHub PAT for non-interactive `git fetch/pull` against
       # private repos. Leave blank for public repos.
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      # AI summary feature - any OpenAI-compatible /chat/completions
+      # endpoint. Leave AI_API_KEY blank to disable the feature; the FE
+      # will hide the AI buttons when /api/ai/status returns enabled=false.
+      AI_ENABLED: ${AI_ENABLED:-true}
+      AI_BASE_URL: ${AI_BASE_URL:-https://api.openai.com/v1}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
+      AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-60}
+      AI_MAX_INPUT_CHARS: ${AI_MAX_INPUT_CHARS:-12000}
       # Hot-update needs the HOST repo path (not the in-container path) so
       # the sibling updater container mounts the right source via the docker
       # socket. Also pin the compose project name so the sibling targets the

@@ -7,10 +7,12 @@ import {
   FileTextOutlined,
   CheckSquareOutlined,
   BugOutlined,
+  CalendarOutlined,
   TeamOutlined,
   SettingOutlined,
   CloudSyncOutlined,
   HistoryOutlined,
+  ThunderboltOutlined,
 } from "@ant-design/icons";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -32,15 +34,22 @@ export default function AppSider() {
       { key: "/stories", icon: <FileTextOutlined />, label: "需求" },
       { key: "/tasks", icon: <CheckSquareOutlined />, label: "任务" },
       { key: "/bugs", icon: <BugOutlined />, label: "缺陷" },
+      { key: "/calendar", icon: <CalendarOutlined />, label: "日历" },
       { key: "/audit-logs", icon: <HistoryOutlined />, label: "操作日志" },
       { key: "/system", icon: <CloudSyncOutlined />, label: "版本与更新" },
       { key: "/settings", icon: <SettingOutlined />, label: "个人设置" },
     ];
     if (role === "admin") {
-      // Insert user management before audit logs.
-      base.splice(5, 0, { key: "/users", icon: <TeamOutlined />, label: "用户管理" });
-      // Insert backup management between user mgmt and audit logs.
-      base.splice(6, 0, { key: "/backups", icon: <DatabaseOutlined />, label: "数据备份" });
+      // Admin-only entries: user management + backups before audit logs,
+      // and AI settings between settings and version-and-update so it
+      // sits with the other "platform" controls.
+      base.splice(6, 0, { key: "/users", icon: <TeamOutlined />, label: "用户管理" });
+      base.splice(7, 0, { key: "/backups", icon: <DatabaseOutlined />, label: "数据备份" });
+      base.splice(
+        base.length - 1,
+        0,
+        { key: "/ai-settings", icon: <ThunderboltOutlined />, label: "AI 设置" },
+      );
     }
     return base;
   }, [role]);

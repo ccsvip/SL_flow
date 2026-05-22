@@ -5,8 +5,10 @@ from sqlalchemy import func, select
 
 from app.api.deps import CurrentUser, DBSession
 from app.core.audit import record_audit
+from app.core.notify import notify_assigned, notify_status_changed
 from app.models.attachment import Attachment, AttachmentTarget
 from app.models.audit_log import AuditAction, AuditTargetType
+from app.models.notification import NotificationTargetType
 from app.models.task import Task
 from app.schemas.task import TaskCreate, TaskOut, TaskUpdate
 
@@ -90,6 +92,17 @@ async def create_task(
         request=request,
         status_code=201,
     )
+    # Notify the brand-new assignee (if any).
+    if t.assignee_id and t.assignee_id != user.id:
+        await notify_assigned(
+            db,
+            actor=user,
+            assignee_id=t.assignee_id,
+            target_type=NotificationTargetType.task,
+            target_id=t.id,
+            target_label=t.title,
+        )
+        await db.commit()
     counts = await _attachment_counts(db, [t.id])
     return _task_to_out(t, counts)
 
@@ -105,6 +118,12 @@ async def update_task(
     t = await db.get(Task, task_id)
     if not t:
         raise HTTPException(status_code=404, detail="Task not found")
+
+    # Snapshot the values we care about BEFORE we apply the patch so we
+    # can diff and emit notifications.
+    prev_status = t.status.value if hasattr(t.status, "value") else str(t.status)
+    prev_assignee_id = t.assignee_id
+
     changed = list(payload.model_dump(exclude_unset=True).keys())
     for k, v in payload.model_dump(exclude_unset=True).items():
         setattr(t, k, v)
@@ -121,6 +140,41 @@ async def update_task(
         status_code=200,
         extra={"changed": changed},
     )
+
+    # Notification fan-out:
+    #   * assignee changed → tell the new assignee
+    #   * status changed → tell the assignee (or creator if unassigned)
+    notif_emitted = False
+    if t.assignee_id and t.assignee_id != prev_assignee_id and t.assignee_id != user.id:
+        await notify_assigned(
+            db,
+            actor=user,
+            assignee_id=t.assignee_id,
+            target_type=NotificationTargetType.task,
+            target_id=t.id,
+            target_label=t.title,
+        )
+        notif_emitted = True
+
+    new_status = t.status.value if hasattr(t.status, "value") else str(t.status)
+    if new_status != prev_status:
+        recipient = t.assignee_id or t.creator_id
+        if recipient and recipient != user.id:
+            await notify_status_changed(
+                db,
+                actor=user,
+                recipient_id=recipient,
+                from_status=prev_status,
+                to_status=new_status,
+                target_type=NotificationTargetType.task,
+                target_id=t.id,
+                target_label=t.title,
+            )
+            notif_emitted = True
+
+    if notif_emitted:
+        await db.commit()
+
     counts = await _attachment_counts(db, [t.id])
     return _task_to_out(t, counts)
 

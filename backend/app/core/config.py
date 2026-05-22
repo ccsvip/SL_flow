@@ -42,6 +42,19 @@ class Settings(BaseSettings):
     # complex-type JSON decoding for env vars.
     CORS_ORIGINS: str = "*"
 
+    # AI summary feature - we talk to any OpenAI-compatible /chat/completions
+    # endpoint so the same code works with OpenAI, DeepSeek, Aliyun Tongyi,
+    # Together, vLLM/ollama, etc. Leave AI_API_KEY empty to disable the
+    # feature; the FE will hide the button accordingly.
+    AI_ENABLED: bool = True
+    AI_BASE_URL: str = "https://api.openai.com/v1"
+    AI_API_KEY: str = ""
+    AI_MODEL: str = "gpt-4o-mini"
+    AI_TIMEOUT_SECONDS: int = 60
+    # Cap the prompt context (description + comments) to keep latency and
+    # cost predictable. Truncation is from the END of older comments first.
+    AI_MAX_INPUT_CHARS: int = 12000
+
     @property
     def cors_origins_list(self) -> List[str]:
         v = self.CORS_ORIGINS.strip()

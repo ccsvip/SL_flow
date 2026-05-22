@@ -15,6 +15,7 @@ import { useMutation } from "@tanstack/react-query";
 import { bugs, attachments } from "@/api/client";
 import { extractError } from "@/api/http";
 import { useProjectOptions, useUserOptions } from "@/hooks/options";
+import AISummaryButton from "@/components/AISummaryButton";
 import AttachmentList from "@/components/AttachmentList";
 import CommentsPanel from "@/components/CommentsPanel";
 import type { Bug } from "@/api/types";
@@ -120,6 +121,9 @@ export default function BugDrawer({
       destroyOnClose
       extra={
         <Space>
+          {isEdit && bug && (
+            <AISummaryButton targetType="bug" targetId={bug.id} />
+          )}
           {isEdit && (
             <Button
               danger

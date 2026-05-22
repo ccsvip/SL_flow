@@ -11,6 +11,7 @@ import {
   Typography,
 } from "antd";
 import {
+  BellOutlined,
   BgColorsOutlined,
   BulbOutlined,
   CloudSyncOutlined,
@@ -30,7 +31,7 @@ import { useEffect, useState } from "react";
 
 import { useAuthStore } from "@/store/auth";
 import { useUIStore, ACCENT_PRESETS, AccentName } from "@/store/ui";
-import { system } from "@/api/client";
+import { notifications, system } from "@/api/client";
 import { http } from "@/api/http";
 import ChangePasswordModal from "@/components/modals/ChangePasswordModal";
 import { initials } from "@/utils/format";
@@ -84,6 +85,15 @@ export default function AppHeader() {
   const [pwOpen, setPwOpen] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
   const headerAvatar = useHeaderAvatar(user?.avatar);
+
+  // Unread notification count - polled every 30s. Cheap query (one
+  // SELECT COUNT(*)). The bell badge updates without a manual refresh.
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["notifications-unread"],
+    queryFn: notifications.unreadCount,
+    refetchInterval: 30_000,
+    enabled: !!user,
+  });
 
   const { data: version } = useQuery({
     queryKey: ["version"],
@@ -187,6 +197,16 @@ export default function AppHeader() {
               icon={mode === "dark" ? <MoonOutlined /> : mode === "light" ? <SunOutlined /> : <BulbOutlined />}
             />
           </Dropdown>
+
+          <Tooltip title={unreadCount > 0 ? `${unreadCount} 条未读通知` : "通知中心"}>
+            <Badge count={unreadCount} size="small" offset={[-2, 2]} overflowCount={99}>
+              <Button
+                type="text"
+                icon={<BellOutlined />}
+                onClick={() => navigate("/notifications")}
+              />
+            </Badge>
+          </Tooltip>
 
           <Dropdown
             trigger={["click"]}

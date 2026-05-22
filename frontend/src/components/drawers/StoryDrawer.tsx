@@ -16,6 +16,7 @@ import { useMutation } from "@tanstack/react-query";
 import { stories, attachments } from "@/api/client";
 import { extractError } from "@/api/http";
 import { useProjectOptions, useUserOptions } from "@/hooks/options";
+import AISummaryButton from "@/components/AISummaryButton";
 import AttachmentList from "@/components/AttachmentList";
 import CommentsPanel from "@/components/CommentsPanel";
 import type { Story } from "@/api/types";
@@ -114,6 +115,9 @@ export default function StoryDrawer({
       destroyOnClose
       extra={
         <Space>
+          {isEdit && story && (
+            <AISummaryButton targetType="story" targetId={story.id} />
+          )}
           {isEdit && (
             <Button
               danger

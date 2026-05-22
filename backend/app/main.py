@@ -8,13 +8,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.routes import (
+    ai,
     attachments,
     audit_logs,
     auth,
     bugs,
+    calendar,
     comments,
     dashboard,
     db_backups,
+    notifications,
     projects,
     stories,
     system,
@@ -66,6 +69,9 @@ def create_app() -> FastAPI:
     api.include_router(bugs.router)
     api.include_router(comments.router)
     api.include_router(attachments.router)
+    api.include_router(calendar.router)
+    api.include_router(notifications.router)
+    api.include_router(ai.router)
     api.include_router(dashboard.router)
     api.include_router(system.router)
     api.include_router(audit_logs.router)

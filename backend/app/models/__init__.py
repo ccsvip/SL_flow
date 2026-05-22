@@ -7,6 +7,12 @@ from app.models.comment import Comment
 from app.models.attachment import Attachment, AttachmentTarget
 from app.models.audit_log import AuditLog, AuditAction, AuditTargetType
 from app.models.db_backup import DBBackup, BackupSetting, BackupKind, BackupStatus
+from app.models.notification import (
+    Notification,
+    NotificationKind,
+    NotificationTargetType,
+)
+from app.models.ai_setting import AISetting
 
 __all__ = [
     "User",
@@ -33,4 +39,8 @@ __all__ = [
     "BackupSetting",
     "BackupKind",
     "BackupStatus",
+    "Notification",
+    "NotificationKind",
+    "NotificationTargetType",
+    "AISetting",
 ]

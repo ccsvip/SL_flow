@@ -1,12 +1,13 @@
-import { App as AntdApp, Button, Empty, Input, Typography } from "antd";
+import { App as AntdApp, Button, Empty, Mentions, Typography } from "antd";
 import { DeleteOutlined, SendOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { comments as api } from "@/api/client";
 import type { CommentTargetType } from "@/api/types";
 import { extractError } from "@/api/http";
 import UserBadge from "@/components/UserBadge";
+import { useUserOptions } from "@/hooks/options";
 import { fromNow } from "@/utils/format";
 import { useAuthStore } from "@/store/auth";
 
@@ -20,6 +21,26 @@ export default function CommentsPanel({ targetType, targetId }: Props) {
   const { modal, message } = AntdApp.useApp();
   const me = useAuthStore((s) => s.user);
   const [body, setBody] = useState("");
+  const userOpts = useUserOptions();
+
+  // The Mentions component wants `[{ value, label }]` rows where the
+  // **value** is what gets inserted as `@<value>`. We emit the raw
+  // username so the backend's mention regex matches it cleanly.
+  const mentionOptions = useMemo(
+    () =>
+      userOpts.map((u) => ({
+        value: u.user.username,
+        label: (
+          <span>
+            <strong>{u.user.full_name || u.user.username}</strong>
+            <span style={{ marginLeft: 8, opacity: 0.6, fontSize: 12 }}>
+              @{u.user.username}
+            </span>
+          </span>
+        ),
+      })),
+    [userOpts],
+  );
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["comments", targetType, targetId],
@@ -48,11 +69,15 @@ export default function CommentsPanel({ targetType, targetId }: Props) {
   return (
     <div>
       <div style={{ marginBottom: 16, display: "flex", flexDirection: "column", gap: 8 }}>
-        <Input.TextArea
-          placeholder="说点什么…"
+        <Mentions
+          placeholder="说点什么…  输入 @ 可以提到队友"
           rows={3}
           value={body}
-          onChange={(e) => setBody(e.target.value)}
+          onChange={(v) => setBody(v)}
+          options={mentionOptions}
+          // Match the same character class the backend regex accepts so a
+          // mention typed here will round-trip server-side.
+          split=" "
         />
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <Button

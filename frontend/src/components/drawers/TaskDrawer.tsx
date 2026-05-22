@@ -19,6 +19,7 @@ import dayjs from "dayjs";
 import { tasks, attachments } from "@/api/client";
 import { extractError } from "@/api/http";
 import { useProjectOptions, useUserOptions } from "@/hooks/options";
+import AISummaryButton from "@/components/AISummaryButton";
 import AttachmentList from "@/components/AttachmentList";
 import CommentsPanel from "@/components/CommentsPanel";
 import type { Task } from "@/api/types";
@@ -129,6 +130,9 @@ export default function TaskDrawer({
       destroyOnClose
       extra={
         <Space>
+          {isEdit && task && (
+            <AISummaryButton targetType="task" targetId={task.id} />
+          )}
           {isEdit && (
             <Button
               danger

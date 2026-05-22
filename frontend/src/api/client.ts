@@ -1,5 +1,11 @@
 import { http } from "./http";
 import type {
+  AIConfig,
+  AIConfigUpdate,
+  AISummaryResponse,
+  AIStatus,
+  AITargetType,
+  AITestResult,
   Attachment,
   AttachmentTargetType,
   AuditLogPage,
@@ -7,11 +13,13 @@ import type {
   BackupSetting,
   BackupSettingUpdate,
   Bug,
+  CalendarResponse,
   Comment,
   CommentTargetType,
   DashboardOverview,
   DBBackup,
   DBBackupPage,
+  NotificationsPage,
   Project,
   RestoreResult,
   Story,
@@ -131,6 +139,57 @@ export const attachments = {
 // --- Dashboard -----------------------------------------------------------
 export const dashboard = {
   overview: () => http.get<DashboardOverview>("/dashboard/overview").then((r) => r.data),
+};
+
+// --- Calendar -----------------------------------------------------------
+export const calendar = {
+  /** Returns events anchored on a date inside [start, end). The window is
+   *  half-open the same way the backend treats it. */
+  list: (params: {
+    start: string;
+    end: string;
+    project_id?: number;
+    mine?: boolean;
+    user_id?: number;
+  }) => http.get<CalendarResponse>("/calendar", { params }).then((r) => r.data),
+};
+
+// --- Notifications ------------------------------------------------------
+export const notifications = {
+  list: (params?: { page?: number; page_size?: number; unread_only?: boolean }) =>
+    http
+      .get<NotificationsPage>("/notifications", { params })
+      .then((r) => r.data),
+  unreadCount: () =>
+    http
+      .get<{ unread: number }>("/notifications/unread-count")
+      .then((r) => r.data.unread),
+  markRead: (id: number) =>
+    http.post(`/notifications/${id}/read`).then(() => true),
+  markAllRead: () =>
+    http.post("/notifications/mark-all-read").then(() => true),
+  remove: (id: number) =>
+    http.delete(`/notifications/${id}`).then(() => true),
+};
+
+// --- AI summary ---------------------------------------------------------
+export const ai = {
+  status: () => http.get<AIStatus>("/ai/status").then((r) => r.data),
+  summarize: (target_type: AITargetType, target_id: number, instruction?: string) =>
+    http
+      .post<AISummaryResponse>("/ai/summarize", {
+        target_type,
+        target_id,
+        instruction,
+      })
+      .then((r) => r.data),
+  // Admin-only - the FE hides the page entry for non-admins anyway, but
+  // these endpoints are also gated server-side by AdminUser.
+  getConfig: () => http.get<AIConfig>("/ai/config").then((r) => r.data),
+  updateConfig: (data: AIConfigUpdate) =>
+    http.put<AIConfig>("/ai/config", data).then((r) => r.data),
+  testConnection: (data: { base_url?: string; api_key?: string; model?: string }) =>
+    http.post<AITestResult>("/ai/test", data).then((r) => r.data),
 };
 
 // --- System --------------------------------------------------------------

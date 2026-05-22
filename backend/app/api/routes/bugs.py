@@ -5,9 +5,11 @@ from sqlalchemy import func, select
 
 from app.api.deps import CurrentUser, DBSession
 from app.core.audit import record_audit
+from app.core.notify import notify_assigned, notify_status_changed
 from app.models.attachment import Attachment, AttachmentTarget
 from app.models.audit_log import AuditAction, AuditTargetType
 from app.models.bug import Bug
+from app.models.notification import NotificationTargetType
 from app.schemas.bug import BugCreate, BugOut, BugUpdate
 
 router = APIRouter(prefix="/bugs", tags=["bugs"])
@@ -89,6 +91,16 @@ async def create_bug(
         request=request,
         status_code=201,
     )
+    if b.assignee_id and b.assignee_id != user.id:
+        await notify_assigned(
+            db,
+            actor=user,
+            assignee_id=b.assignee_id,
+            target_type=NotificationTargetType.bug,
+            target_id=b.id,
+            target_label=b.title,
+        )
+        await db.commit()
     counts = await _attachment_counts(db, [b.id])
     return _bug_to_out(b, counts)
 
@@ -104,6 +116,10 @@ async def update_bug(
     b = await db.get(Bug, bug_id)
     if not b:
         raise HTTPException(status_code=404, detail="Bug not found")
+
+    prev_status = b.status.value if hasattr(b.status, "value") else str(b.status)
+    prev_assignee_id = b.assignee_id
+
     changed = list(payload.model_dump(exclude_unset=True).keys())
     for k, v in payload.model_dump(exclude_unset=True).items():
         setattr(b, k, v)
@@ -120,6 +136,38 @@ async def update_bug(
         status_code=200,
         extra={"changed": changed},
     )
+
+    notif_emitted = False
+    if b.assignee_id and b.assignee_id != prev_assignee_id and b.assignee_id != user.id:
+        await notify_assigned(
+            db,
+            actor=user,
+            assignee_id=b.assignee_id,
+            target_type=NotificationTargetType.bug,
+            target_id=b.id,
+            target_label=b.title,
+        )
+        notif_emitted = True
+
+    new_status = b.status.value if hasattr(b.status, "value") else str(b.status)
+    if new_status != prev_status:
+        recipient = b.assignee_id or b.creator_id
+        if recipient and recipient != user.id:
+            await notify_status_changed(
+                db,
+                actor=user,
+                recipient_id=recipient,
+                from_status=prev_status,
+                to_status=new_status,
+                target_type=NotificationTargetType.bug,
+                target_id=b.id,
+                target_label=b.title,
+            )
+            notif_emitted = True
+
+    if notif_emitted:
+        await db.commit()
+
     counts = await _attachment_counts(db, [b.id])
     return _bug_to_out(b, counts)
 

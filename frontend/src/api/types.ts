@@ -288,3 +288,101 @@ export interface RestoreResult {
   message: string;
   pre_restore_backup_id: number | null;
 }
+
+// Calendar -------------------------------------------------------------------
+
+export type CalendarKind = "task" | "story" | "bug";
+
+export interface CalendarEvent {
+  kind: CalendarKind;
+  id: number;
+  title: string;
+  /** ISO `YYYY-MM-DD` - the day this event anchors to. For tasks this is
+   *  due_date; for stories/bugs it is the date portion of updated_at. */
+  date: string;
+  anchor: "due_date" | "updated_at";
+  status: string;
+  priority?: string;
+  severity?: string;
+  project_id: number;
+  assignee: {
+    id: number;
+    username: string;
+    full_name: string | null;
+  } | null;
+}
+
+export interface CalendarResponse {
+  start: string;
+  end: string;
+  events: CalendarEvent[];
+}
+
+// Notifications -------------------------------------------------------------
+
+export type NotificationKind = "mention" | "assigned" | "status" | "comment";
+export type NotificationTargetType = "project" | "story" | "task" | "bug";
+
+export interface NotificationItem {
+  id: number;
+  kind: NotificationKind;
+  target_type: NotificationTargetType;
+  target_id: number;
+  body: string;
+  is_read: boolean;
+  comment_id: number | null;
+  extra: string | null;
+  created_at: string;
+  actor: { id: number; username: string; full_name: string | null } | null;
+}
+
+export interface NotificationsPage {
+  items: NotificationItem[];
+  total: number;
+  unread: number;
+  page: number;
+  page_size: number;
+}
+
+// AI summary ---------------------------------------------------------------
+
+export type AITargetType = "task" | "story" | "bug";
+
+export interface AIStatus {
+  enabled: boolean;
+  model: string | null;
+}
+
+export interface AISummaryResponse {
+  summary: string;
+  target_type: AITargetType;
+  target_id: number;
+  title: string;
+}
+
+export interface AIConfig {
+  enabled: boolean;
+  base_url: string;
+  model: string;
+  timeout_seconds: number;
+  max_input_chars: number;
+  api_key_masked: string | null;
+  api_key_present: boolean;
+}
+
+export interface AIConfigUpdate {
+  enabled?: boolean;
+  base_url?: string;
+  /** Empty string clears the saved key; omit to keep it. */
+  api_key?: string;
+  model?: string;
+  timeout_seconds?: number;
+  max_input_chars?: number;
+}
+
+export interface AITestResult {
+  ok: boolean;
+  message: string;
+  sample: string | null;
+  model: string | null;
+}

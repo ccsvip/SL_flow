@@ -11,8 +11,11 @@ import ProjectDetailPage from "@/pages/ProjectDetailPage";
 import StoriesPage from "@/pages/StoriesPage";
 import TasksPage from "@/pages/TasksPage";
 import BugsPage from "@/pages/BugsPage";
+import CalendarPage from "@/pages/CalendarPage";
+import NotificationsPage from "@/pages/NotificationsPage";
 import UsersPage from "@/pages/UsersPage";
 import SettingsPage from "@/pages/SettingsPage";
+import AISettingsPage from "@/pages/AISettingsPage";
 import SystemPage from "@/pages/SystemPage";
 import AuditLogsPage from "@/pages/AuditLogsPage";
 import BackupsPage from "@/pages/BackupsPage";
@@ -64,6 +67,8 @@ export default function App() {
         <Route path="stories" element={<StoriesPage />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="bugs" element={<BugsPage />} />
+        <Route path="calendar" element={<CalendarPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
         <Route
           path="users"
           element={
@@ -73,6 +78,14 @@ export default function App() {
           }
         />
         <Route path="settings" element={<SettingsPage />} />
+        <Route
+          path="ai-settings"
+          element={
+            <RequireAdmin>
+              <AISettingsPage />
+            </RequireAdmin>
+          }
+        />
         <Route path="system" element={<SystemPage />} />
         <Route path="audit-logs" element={<AuditLogsPage />} />
         <Route

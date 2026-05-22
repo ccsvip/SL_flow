@@ -5,8 +5,10 @@ from sqlalchemy import func, select
 
 from app.api.deps import CurrentUser, DBSession
 from app.core.audit import record_audit
+from app.core.notify import notify_assigned, notify_status_changed
 from app.models.attachment import Attachment, AttachmentTarget
 from app.models.audit_log import AuditAction, AuditTargetType
+from app.models.notification import NotificationTargetType
 from app.models.story import Story
 from app.schemas.story import StoryCreate, StoryOut, StoryUpdate
 
@@ -86,6 +88,16 @@ async def create_story(
         request=request,
         status_code=201,
     )
+    if s.assignee_id and s.assignee_id != user.id:
+        await notify_assigned(
+            db,
+            actor=user,
+            assignee_id=s.assignee_id,
+            target_type=NotificationTargetType.story,
+            target_id=s.id,
+            target_label=s.title,
+        )
+        await db.commit()
     counts = await _attachment_counts(db, [s.id])
     return _story_to_out(s, counts)
 
@@ -101,6 +113,10 @@ async def update_story(
     s = await db.get(Story, story_id)
     if not s:
         raise HTTPException(status_code=404, detail="Story not found")
+
+    prev_status = s.status.value if hasattr(s.status, "value") else str(s.status)
+    prev_assignee_id = s.assignee_id
+
     changed = list(payload.model_dump(exclude_unset=True).keys())
     for k, v in payload.model_dump(exclude_unset=True).items():
         setattr(s, k, v)
@@ -117,6 +133,38 @@ async def update_story(
         status_code=200,
         extra={"changed": changed},
     )
+
+    notif_emitted = False
+    if s.assignee_id and s.assignee_id != prev_assignee_id and s.assignee_id != user.id:
+        await notify_assigned(
+            db,
+            actor=user,
+            assignee_id=s.assignee_id,
+            target_type=NotificationTargetType.story,
+            target_id=s.id,
+            target_label=s.title,
+        )
+        notif_emitted = True
+
+    new_status = s.status.value if hasattr(s.status, "value") else str(s.status)
+    if new_status != prev_status:
+        recipient = s.assignee_id or s.creator_id
+        if recipient and recipient != user.id:
+            await notify_status_changed(
+                db,
+                actor=user,
+                recipient_id=recipient,
+                from_status=prev_status,
+                to_status=new_status,
+                target_type=NotificationTargetType.story,
+                target_id=s.id,
+                target_label=s.title,
+            )
+            notif_emitted = True
+
+    if notif_emitted:
+        await db.commit()
+
     counts = await _attachment_counts(db, [s.id])
     return _story_to_out(s, counts)
 
