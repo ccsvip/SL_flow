@@ -314,7 +314,40 @@ async def _do_pull_and_rebuild() -> None:
 
         _log(f"=== update started at {time.strftime('%Y-%m-%dT%H:%M:%S%z')} ===")
 
-        # 1. git pull (synchronous, fast).
+        # 1. Stash any local working-tree changes BEFORE pull. On deployed
+        # servers we routinely see uncommitted edits to tracked files
+        # (sysadmin tweaks /etc-style edits, or interrupted previous
+        # updates that left .alembic_initialized/ etc. dirty). `git pull
+        # --ff-only` refuses with "Your local changes to the following
+        # files would be overwritten by merge" in that case, and the user
+        # ends up stuck.
+        #
+        # We stash everything (including untracked files) under a tagged
+        # message so the stash is recoverable if it ever matters. We do
+        # NOT auto-pop after pull: pop on a possibly-rebased tree can
+        # explode with conflicts, and the deployed server's working tree
+        # SHOULD be clean. The stash entry is a safety-net only - admins
+        # can `git stash list` / `git stash apply` if they need it.
+        rc_st, out_st, err_st = await _run_git(
+            ["git", "status", "--porcelain"], cwd=repo, timeout=20
+        )
+        if rc_st == 0 and out_st.strip():
+            ts = time.strftime("%Y%m%dT%H%M%S")
+            stash_msg = f"slflow-pre-update-{ts}"
+            rc, out, err = await _run_git(
+                ["git", "stash", "push", "-u", "-m", stash_msg],
+                cwd=repo,
+                timeout=60,
+            )
+            _log(f"[git stash] rc={rc} (msg={stash_msg})\n{out}\n{err}")
+            if rc != 0:
+                _log(
+                    "[abort] git stash failed - working tree has changes "
+                    "that cannot be stashed; please clean manually and retry"
+                )
+                return
+
+        # 2. git pull (synchronous, fast).
         rc, out, err = await _run_git(["git", "pull", "--ff-only"], cwd=repo, timeout=180)
         _log(f"[git pull] rc={rc}\n{out}\n{err}")
         if rc != 0:
