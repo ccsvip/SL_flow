@@ -72,7 +72,7 @@ Disable by setting `ENABLE_HOT_RELOAD=false`.
 ### Recovering from a stuck update
 
 If a hot update fails (502 errors, backend restart loop, "another update is
-in progress" forever), SSH to the host. You have two paths.
+in progress" forever), SSH to the host. You have three paths.
 
 **Path A — diagnose first, no containers touched:**
 
