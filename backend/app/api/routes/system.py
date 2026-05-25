@@ -370,19 +370,59 @@ async def _do_pull_and_rebuild() -> None:
         # Best-effort: kill any leftover updater container from a previous run.
         await _run(["docker", "rm", "-f", "slflow-updater"], timeout=10)
 
-        # 3. Spawn the sibling. It runs `docker compose up -d --build` against
-        # the same project as the running stack. When this backend container
-        # is recreated mid-rebuild, the sibling keeps going.
+        # 3. Spawn the sibling. It runs `docker compose build` first, then
+        # `docker compose up -d` ONLY if the build succeeded. We split the
+        # two steps so a broken Dockerfile / dependency / migration that
+        # makes the image fail to BUILD never tears down the currently
+        # running stack - admins still see the old version, with a log
+        # trail explaining what went wrong.
+        #
+        # Failure modes & how the script handles them:
+        #
+        #   build fails      → exit non-zero, old containers untouched,
+        #                      lock cleared so admin can retry.
+        #   build OK, up OK  → poll /api/healthz from inside the sibling's
+        #                      docker network; on health, success.
+        #   build OK, but new backend fails to start (migration error,
+        #     bad config, etc.) → /healthz never returns 200 → log a loud
+        #     "[unhealthy after N retries]" line so admins can find it
+        #     in /api/system/update-log.
         inner_script = (
-            "echo \"[updater] starting at $(date -Iseconds)\" >> /workspace/.last_update.log && "
-            "cd /workspace && "
-            "docker compose up -d --build >> /workspace/.last_update.log 2>&1; "
-            "rc=$?; "
-            "echo \"[updater] docker compose up exit=$rc at $(date -Iseconds)\" >> /workspace/.last_update.log; "
-            # Best-effort: clean up the lock file the spawner left behind so
-            # the next update can proceed once we're done.
+            "set -e; "
+            "echo \"[updater] starting at $(date -Iseconds)\" >> /workspace/.last_update.log; "
+            "cd /workspace; "
+            "echo \"[updater] phase=build\" >> /workspace/.last_update.log; "
+            "if ! docker compose build >> /workspace/.last_update.log 2>&1; then "
+            "  echo \"[updater] BUILD FAILED - running stack untouched\" >> /workspace/.last_update.log; "
+            "  rm -f /workspace/.update.lock; "
+            "  exit 1; "
+            "fi; "
+            "echo \"[updater] phase=up\" >> /workspace/.last_update.log; "
+            "if ! docker compose up -d --remove-orphans >> /workspace/.last_update.log 2>&1; then "
+            "  echo \"[updater] COMPOSE UP FAILED\" >> /workspace/.last_update.log; "
+            "  rm -f /workspace/.update.lock; "
+            "  exit 2; "
+            "fi; "
+            "echo \"[updater] phase=health-check\" >> /workspace/.last_update.log; "
+            "ok=0; "
+            # Poll the backend container directly via its compose-network
+            # hostname. We resolve via `docker exec` against the running
+            # backend so we don't depend on host port mapping.
+            "for i in $(seq 1 60); do "
+            "  if docker exec slflow-backend curl -fsS http://localhost:8000/api/healthz >/dev/null 2>&1; then "
+            "    ok=1; break; "
+            "  fi; "
+            "  sleep 2; "
+            "done; "
+            "if [ \"$ok\" = \"1\" ]; then "
+            "  echo \"[updater] HEALTHY at $(date -Iseconds)\" >> /workspace/.last_update.log; "
+            "else "
+            "  echo \"[updater] UNHEALTHY after 120s - check 'docker compose logs backend'\" >> /workspace/.last_update.log; "
+            "  docker compose logs backend --tail=60 >> /workspace/.last_update.log 2>&1 || true; "
+            "fi; "
+            # Always release the lock so the next update can run.
             "rm -f /workspace/.update.lock; "
-            "exit $rc"
+            "exit 0"
         )
         sibling_cmd = [
             "docker",
