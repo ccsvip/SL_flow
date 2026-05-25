@@ -14,6 +14,7 @@ import {
   HistoryOutlined,
   ThunderboltOutlined,
   ReadOutlined,
+  MonitorOutlined,
 } from "@ant-design/icons";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -51,6 +52,7 @@ export default function AppSider() {
         base.length - 1,
         0,
         { key: "/ai-settings", icon: <ThunderboltOutlined />, label: "AI 设置" },
+        { key: "/ops", icon: <MonitorOutlined />, label: "运维看板" },
       );
     }
     return base;
