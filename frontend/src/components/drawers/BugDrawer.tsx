@@ -1,3 +1,4 @@
+import { handleTextAreaKeyDown, handleTextAreaPaste } from "@/utils/textAreaHandlers";
 import React from "react";
 import {
   App as AntdApp,
@@ -163,17 +164,17 @@ export default function BugDrawer({
                   <Input placeholder="一句话描述问题" />
                 </Form.Item>
                 <Form.Item label="问题描述" name="description">
-                  <Input.TextArea rows={3} />
+                  <Input.TextArea rows={3} onKeyDown={handleTextAreaKeyDown} onPaste={(e) => handleTextAreaPaste(e, stagedFiles, setStagedFiles)} />
                 </Form.Item>
                 <Form.Item label="复现步骤" name="steps_to_reproduce">
-                  <Input.TextArea rows={3} placeholder={"1. ...\n2. ...\n3. ..."} />
+                  <Input.TextArea rows={3} placeholder={"1. ...\n2. ...\n3. ..."} onKeyDown={handleTextAreaKeyDown} onPaste={(e) => handleTextAreaPaste(e, stagedFiles, setStagedFiles)} />
                 </Form.Item>
                 <Space style={{ display: "flex", gap: 8 }}>
                   <Form.Item label="期望结果" name="expected_result" style={{ flex: 1 }}>
-                    <Input.TextArea rows={3} />
+                    <Input.TextArea rows={3} onKeyDown={handleTextAreaKeyDown} onPaste={(e) => handleTextAreaPaste(e, stagedFiles, setStagedFiles)} />
                   </Form.Item>
                   <Form.Item label="实际结果" name="actual_result" style={{ flex: 1 }}>
-                    <Input.TextArea rows={3} />
+                    <Input.TextArea rows={3} onKeyDown={handleTextAreaKeyDown} onPaste={(e) => handleTextAreaPaste(e, stagedFiles, setStagedFiles)} />
                   </Form.Item>
                 </Space>
                 <Form.Item label="环境" name="environment">

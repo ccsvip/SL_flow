@@ -105,7 +105,16 @@ export default function CommentsPanel({ targetType, targetId }: Props) {
                     )}
                   </Typography.Text>
                 </div>
-                <div style={{ whiteSpace: "pre-wrap", fontSize: 14 }}>{c.body}</div>
+                <div
+                  style={{ whiteSpace: "pre-wrap", fontSize: 14, cursor: "pointer" }}
+                  title="点击复制"
+                  onClick={() => {
+                    navigator.clipboard.writeText(c.body);
+                    message.success("已复制到剪贴板");
+                  }}
+                >
+                  {c.body}
+                </div>
               </div>
             );
           })}

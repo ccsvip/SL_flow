@@ -1,3 +1,4 @@
+import { handleTextAreaKeyDown, handleTextAreaPaste } from "@/utils/textAreaHandlers";
 import React from "react";
 import {
   App as AntdApp,
@@ -157,10 +158,10 @@ export default function StoryDrawer({
                   <Input />
                 </Form.Item>
                 <Form.Item label="需求描述" name="description">
-                  <Input.TextArea rows={4} placeholder="作为…我希望…以便…" />
+                  <Input.TextArea rows={4} placeholder="作为…我希望…以便…" onKeyDown={handleTextAreaKeyDown} onPaste={(e) => handleTextAreaPaste(e, stagedFiles, setStagedFiles)} />
                 </Form.Item>
                 <Form.Item label="验收标准" name="acceptance_criteria">
-                  <Input.TextArea rows={3} placeholder="给定…当…那么…" />
+                  <Input.TextArea rows={3} placeholder="给定…当…那么…" onKeyDown={handleTextAreaKeyDown} onPaste={(e) => handleTextAreaPaste(e, stagedFiles, setStagedFiles)} />
                 </Form.Item>
                 <Form.Item
                   label="所属项目"

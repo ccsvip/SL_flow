@@ -20,6 +20,8 @@ import UserBadge from "@/components/UserBadge";
 import AttachmentList from "@/components/AttachmentList";
 import CommentsPanel from "@/components/CommentsPanel";
 import { fromNow, formatDate } from "@/utils/format";
+import TaskDrawer from "@/components/drawers/TaskDrawer";
+import type { Task } from "@/api/types";
 import type { TaskStatus } from "@/api/types";
 
 const TASK_COLUMNS: { key: TaskStatus; label: string }[] = [
@@ -33,6 +35,7 @@ export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const projectId = Number(id);
   const navigate = useNavigate();
+  const [editingTask, setEditingTask] = React.useState<Task | undefined>();
   const qc = useQueryClient();
 
   const { data: project, isLoading } = useQuery({
@@ -197,7 +200,7 @@ export default function ProjectDetailPage() {
                         </Typography.Text>
                       ) : (
                         items.map((t) => (
-                          <div className="slf-kanban-card" key={t.id}>
+                          <div className="slf-kanban-card" key={t.id} onClick={() => setEditingTask(t)}>
                             <div style={{ fontWeight: 600 }}>{t.title}</div>
                             <div
                               style={{
@@ -304,6 +307,15 @@ export default function ProjectDetailPage() {
             ),
           },
         ]}
+      />
+      <TaskDrawer
+        open={!!editingTask}
+        task={editingTask}
+        onClose={() => setEditingTask(undefined)}
+        onSaved={() => {
+          setEditingTask(undefined);
+          qc.invalidateQueries({ queryKey: ["project", id] });
+        }}
       />
     </div>
   );

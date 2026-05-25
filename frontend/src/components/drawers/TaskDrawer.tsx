@@ -1,3 +1,4 @@
+import { handleTextAreaKeyDown, handleTextAreaPaste } from "@/utils/textAreaHandlers";
 import React from "react";
 import {
   App as AntdApp,
@@ -173,7 +174,7 @@ export default function TaskDrawer({
                   <Input placeholder="任务标题" />
                 </Form.Item>
                 <Form.Item label="描述" name="description">
-                  <Input.TextArea rows={4} placeholder="任务描述、上下文…" />
+                  <Input.TextArea rows={4} placeholder="任务描述、上下文…" onKeyDown={handleTextAreaKeyDown} onPaste={(e) => handleTextAreaPaste(e, stagedFiles, setStagedFiles)} />
                 </Form.Item>
                 <Space.Compact style={{ width: "100%" }}>
                   <Form.Item
