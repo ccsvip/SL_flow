@@ -72,18 +72,53 @@ Disable by setting `ENABLE_HOT_RELOAD=false`.
 ### Recovering from a stuck update
 
 If a hot update fails (502 errors, backend restart loop, "another update is
-in progress" forever), SSH to the host, then:
+in progress" forever), SSH to the host. You have two paths.
+
+**Path A — diagnose first, no containers touched:**
 
 ```bash
-cd /root/workspace/SL_flow   # or wherever HOST_REPO_PATH points
+cd /root/workspace/SL_flow
+git fetch origin && git checkout feat/avatar-and-attachment-indicator   # or whichever branch carries the fix
+sudo bash scripts/recover.sh --diagnose
+```
+
+`--diagnose` is read-only: it prints `git status`, lock state, `docker
+compose ps`, the last 100 lines of backend logs, the last 40 of frontend
+logs, the hot-update log tail, and disk usage. Paste the output to whoever
+is helping you debug. **No container is touched.**
+
+**Path B — full recovery rebuild:**
+
+```bash
+cd /root/workspace/SL_flow
+git fetch origin && git checkout feat/avatar-and-attachment-indicator
 sudo bash scripts/recover.sh
 ```
 
-The script clears stale locks + orphan updater containers, rebuilds backend
-and frontend in place (database keeps running), waits for `/api/healthz` to
-return 200, and prints diagnostic logs if it doesn't. The currently running
-stack stays alive while the rebuild happens; only on a successful build does
-it swap containers.
+Clears stale locks + orphan updater containers, pre-pulls the
+`docker:27.5.1-cli` sibling image, rebuilds backend and frontend in place
+(database keeps running), waits for `/api/healthz` to return 200 (probed
+via `docker exec` so it works regardless of custom `BACKEND_PORT`), prints
+diagnostic logs if it doesn't. The running stack stays alive while the
+rebuild happens; only on a successful build does it swap containers.
+
+**Path C — no-script fallback (if you can't fetch the new code):**
+
+If the host has no network access to GitHub, or the branch with
+`scripts/recover.sh` isn't checked out yet, run this directly:
+
+```bash
+cd /root/workspace/SL_flow
+rm -f .update.lock                              # release stuck hot-update lock
+docker rm -f slflow-updater 2>/dev/null         # kill any orphan sibling
+git stash push -u -m manual-recovery 2>/dev/null # safety-stash dirty edits
+git pull --ff-only                              # pick up latest code
+docker compose build                            # rebuild images
+docker compose up -d --remove-orphans           # swap in new containers
+docker compose logs backend --tail=80           # paste this if still broken
+```
+
+Same logical effect as `recover.sh`, just typed by hand.
 
 ## Default Ports
 
