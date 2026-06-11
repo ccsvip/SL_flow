@@ -13,6 +13,7 @@ from app.models.notification import (
     NotificationTargetType,
 )
 from app.models.ai_setting import AISetting
+from app.models.api_key import APIKey
 from app.models.prd import (
     PRDDocument,
     PRDRequirement,
@@ -51,6 +52,7 @@ __all__ = [
     "NotificationKind",
     "NotificationTargetType",
     "AISetting",
+    "APIKey",
     "PRDDocument",
     "PRDRequirement",
     "PRDTemplate",

@@ -32,6 +32,7 @@ class AuditTargetType(str, enum.Enum):
     db_backup = "db_backup"
     backup_setting = "backup_setting"
     prd = "prd"
+    managed_api_key = "managed_api_key"
 
 
 class AuditLog(Base):

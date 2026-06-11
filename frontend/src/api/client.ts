@@ -2,6 +2,9 @@ import { http } from "./http";
 import type {
   AIConfig,
   AIConfigUpdate,
+  APIKeyCreateInput,
+  APIKeyItem,
+  APIKeyUpdateInput,
   AISummaryResponse,
   AIStatus,
   AITargetType,
@@ -73,6 +76,17 @@ export const users = {
       .then((r) => r.data);
   },
   removeAvatar: () => http.delete("/users/me/avatar").then(() => true),
+};
+
+// --- API Keys ------------------------------------------------------------
+export const apiKeys = {
+  list: () => http.get<APIKeyItem[]>("/api-keys").then((r) => r.data),
+  get: (id: number) => http.get<APIKeyItem>(`/api-keys/${id}`).then((r) => r.data),
+  create: (data: APIKeyCreateInput) =>
+    http.post<APIKeyItem>("/api-keys", data).then((r) => r.data),
+  update: (id: number, data: APIKeyUpdateInput) =>
+    http.patch<APIKeyItem>(`/api-keys/${id}`, data).then((r) => r.data),
+  remove: (id: number) => http.delete(`/api-keys/${id}`).then(() => true),
 };
 
 // --- Projects ------------------------------------------------------------

@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes import (
     ai,
+    api_keys,
     attachments,
     audit_logs,
     auth,
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
     api.include_router(calendar.router)
     api.include_router(notifications.router)
     api.include_router(ai.router)
+    api.include_router(api_keys.router)
     api.include_router(prd.router)
     api.include_router(dashboard.router)
     api.include_router(ops.router)

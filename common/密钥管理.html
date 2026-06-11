@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 密钥管理台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f3f4f6; /* 浅灰色背景 */
+        }
+        .card-enter {
+            animation: slideIn 0.4s ease-out forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8; 
+        }
+
+        /* 标签样式调整 */
+        .model-tag {
+            display: inline-block;
+            margin-right: 4px;
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased min-h-screen p-4 md:p-8 flex flex-col items-center">
+
+    <header class="w-full max-w-6xl mb-8 text-center">
+        <h1 class="text-3xl md:text-4xl font-bold text-indigo-700 tracking-tight flex items-center justify-center gap-3">
+            <i class="fa-solid fa-key"></i>
+            API 密钥管理台
+        </h1>
+        <p class="text-gray-500 mt-2 text-sm md:text-base">简单高效地生成与管理您的 API 连接信息</p>
+    </header>
+
+    <main class="w-full max-w-6xl flex flex-col gap-6">
+        
+        <!-- 上半部分：左侧表单，右侧完整大卡片展示 -->
+        <div class="flex flex-col lg:flex-row gap-6 w-full items-stretch">
+            
+            <!-- 左侧：表单区域 -->
+            <section class="w-full lg:w-5/12 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex-shrink-0 self-start">
+                <h2 class="text-lg font-semibold mb-6 flex items-center gap-2 text-gray-800 border-b pb-3">
+                    <i class="fa-solid fa-pen-to-square text-indigo-500"></i>
+                    添加新密钥
+                </h2>
+                
+                <form id="keyForm" class="space-y-4">
+                    <!-- 标题 -->
+                    <div>
+                        <label for="title" class="block text-sm font-medium text-gray-700 mb-1">标题 <span class="text-red-500">*</span></label>
+                        <input type="text" id="title" required placeholder="例如：OpenAI 生产环境" 
+                               class="w-full rounded-lg border-gray-300 border px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow text-sm">
+                    </div>
+
+                    <!-- 密钥 -->
+                    <div>
+                        <label for="apiKey" class="block text-sm font-medium text-gray-700 mb-1">API 密钥 <span class="text-red-500">*</span></label>
+                        <input type="text" id="apiKey" required placeholder="sk-..." 
+                               class="w-full rounded-lg border-gray-300 border px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow text-sm font-mono">
+                    </div>
+
+                    <!-- Base URL -->
+                    <div>
+                        <label for="baseUrl" class="block text-sm font-medium text-gray-700 mb-1">Base URL</label>
+                        <input type="url" id="baseUrl" placeholder="https://api.openai.com/v1"
+                               class="w-full rounded-lg border-gray-300 border px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow text-sm text-gray-600">
+                    </div>
+
+                    <!-- 模型列表 -->
+                    <div>
+                        <label for="models" class="block text-sm font-medium text-gray-700 mb-1">可用模型</label>
+                        <input type="text" id="models" placeholder="例如: gpt-4, claude-3-opus" 
+                               class="w-full rounded-lg border-gray-300 border px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow text-sm">
+                    </div>
+
+                    <!-- 备注 -->
+                    <div>
+                        <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">备注信息</label>
+                        <textarea id="notes" rows="2" placeholder="用于主营业务对话，每月额度 $100" 
+                                  class="w-full rounded-lg border-gray-300 border px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow text-sm resize-none"></textarea>
+                    </div>
+
+                    <!-- 提交按钮 -->
+                    <div class="flex justify-end pt-2">
+                        <button type="submit" 
+                                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors focus:ring-4 focus:ring-indigo-200 flex items-center justify-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-plus"></i>
+                            生成卡片
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- 右侧：详情展示区 -->
+            <section class="w-full lg:w-7/12 flex flex-col">
+                <div id="rightSideContent" class="h-full w-full flex items-center justify-center bg-transparent">
+                    <!-- 空状态 -->
+                    <div id="emptyState" class="flex flex-col items-center justify-center text-gray-400 py-16 bg-white rounded-2xl border border-gray-100 shadow-sm w-full h-full min-h-[460px]">
+                        <i class="fa-regular fa-folder-open text-5xl mb-4 opacity-50"></i>
+                        <p>暂无选中的密钥卡片，请在左侧生成或在下方选择</p>
+                    </div>
+                    
+                    <!-- 卡片渲染区 -->
+                    <div id="activeCardContainer" class="w-full hidden items-start">
+                        <!-- 详情卡片将被注入这里 -->
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- 下半部分：迷你卡片列表 (有数据时才显示) -->
+        <section id="bottomMiniCardsSection" class="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hidden">
+            <h3 class="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2 border-b pb-2">
+                <i class="fa-solid fa-layer-group text-indigo-500"></i>
+                我的密钥库
+            </h3>
+            <div id="miniCardsContainer" class="flex flex-wrap gap-4">
+                <!-- 迷你卡片注入这里 -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Toast 提示容器 -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+
+    <script>
+        // 数据状态管理
+        let keysData = [];
+        let activeKeyId = null;
+
+        const form = document.getElementById('keyForm');
+        const emptyState = document.getElementById('emptyState');
+        const activeCardContainer = document.getElementById('activeCardContainer');
+        const bottomMiniCardsSection = document.getElementById('bottomMiniCardsSection');
+        const miniCardsContainer = document.getElementById('miniCardsContainer');
+        const toastContainer = document.getElementById('toastContainer');
+
+        // 监听表单提交
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const title = document.getElementById('title').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const baseUrl = document.getElementById('baseUrl').value.trim();
+            const modelsInput = document.getElementById('models').value.trim();
+            const notes = document.getElementById('notes').value.trim();
+
+            if (!title || !apiKey) {
+                showToast('请填写标题和API密钥', 'error');
+                return;
+            }
+
+            // 处理模型数组，支持逗号或中文逗号分隔
+            const models = modelsInput ? modelsInput.split(/[,，]/).map(m => m.trim()).filter(m => m) : [];
+            const id = `key-${Date.now()}`;
+
+            // 存储到数据对象
+            const newKey = { id, title, apiKey, baseUrl, models, notes };
+            keysData.push(newKey);
+            
+            // 将新卡片设置为当前激活的项
+            activeKeyId = id;
+            
+            // 更新并渲染UI
+            updateView();
+            showToast('密钥添加成功', 'success');
+            
+            // 彻底清空所有输入框的内容
+            document.getElementById('title').value = '';
+            document.getElementById('apiKey').value = '';
+            document.getElementById('baseUrl').value = '';
+            document.getElementById('models').value = '';
+            document.getElementById('notes').value = '';
+            
+            document.getElementById('title').focus();
+        });
+
+        // 核心更新视图逻辑
+        function updateView() {
+            if (keysData.length === 0) {
+                emptyState.style.display = 'flex';
+                activeCardContainer.classList.add('hidden');
+                activeCardContainer.classList.remove('flex');
+                bottomMiniCardsSection.classList.add('hidden');
+                activeKeyId = null;
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            activeCardContainer.classList.remove('hidden');
+            activeCardContainer.classList.add('flex');
+            bottomMiniCardsSection.classList.remove('hidden');
+
+            // 确保总有一个激活状态（例如删除当前项后，默认选中第一个）
+            if (!activeKeyId || !keysData.find(k => k.id === activeKeyId)) {
+                activeKeyId = keysData[0].id;
+            }
+
+            renderMiniCards();
+            renderActiveCard();
+        }
+
+        // 渲染下方小长方形卡片 (只显示标题)
+        function renderMiniCards() {
+            miniCardsContainer.innerHTML = '';
+            keysData.forEach(key => {
+                const isActive = key.id === activeKeyId;
+                const card = document.createElement('div');
+                
+                // 设置迷你卡片样式，长方形，点击切换
+                card.className = `cursor-pointer px-4 py-3 rounded-xl border flex items-center gap-3 w-48 sm:w-[200px] transition-all duration-200 transform hover:-translate-y-1 select-none shadow-sm
+                    ${isActive 
+                        ? 'bg-indigo-600 border-indigo-700 text-white ring-2 ring-indigo-200 ring-offset-1' 
+                        : 'bg-white border-gray-200 text-gray-700 hover:border-indigo-300 hover:shadow-md'}`;
+                
+                card.onclick = () => {
+                    activeKeyId = key.id;
+                    updateView(); 
+                };
+
+                card.innerHTML = `
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isActive ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-500'}">
+                        <i class="fa-solid fa-key text-sm"></i>
+                    </div>
+                    <div class="flex flex-col overflow-hidden">
+                        <span class="font-bold text-sm truncate w-full" title="${key.title}">${key.title}</span>
+                    </div>
+                `;
+                miniCardsContainer.appendChild(card);
+            });
+        }
+
+        // 渲染右侧详细卡片
+        function renderActiveCard() {
+            const key = keysData.find(k => k.id === activeKeyId);
+            if (!key) return;
+
+            // 格式化部分隐藏的密钥
+            const visibleStart = Math.min(6, Math.floor(key.apiKey.length / 3));
+            const visibleEnd = Math.min(4, Math.floor(key.apiKey.length / 3));
+            let maskedKey = key.apiKey;
+            if (key.apiKey.length > 10) {
+                maskedKey = `${key.apiKey.substring(0, visibleStart)}••••••••••••••••${key.apiKey.substring(key.apiKey.length - visibleEnd)}`;
+            } else {
+                 maskedKey = '••••••••'; 
+            }
+
+            // 构建模型标签HTML
+            let modelsHtml = '';
+            if (key.models.length > 0) {
+                modelsHtml = `
+                    <div class="mt-4 pt-4 border-t border-gray-100">
+                        <div class="text-xs font-bold text-gray-500 mb-3 flex items-center gap-1.5 uppercase tracking-wide">
+                            <i class="fa-solid fa-microchip"></i> 支持的模型 <span class="text-gray-400 font-normal ml-2 text-[10px] normal-case">(点击标签即可复制)</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            ${key.models.map(model => `<span onclick="copyToClipboard('${model}', this)" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md text-sm font-mono border border-indigo-100 cursor-pointer transition-all active:scale-95 flex items-center gap-1.5 select-none" title="点击复制 ${model}"><i class="fa-regular fa-copy text-[11px] opacity-60"></i>${model}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 构建备注HTML
+            let notesHtml = '';
+            if (key.notes) {
+                notesHtml = `
+                    <div class="mt-4 pt-4 border-t border-gray-100">
+                        <div class="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+                            <i class="fa-regular fa-comment-dots"></i> 备注
+                        </div>
+                        <p class="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100 leading-relaxed">${key.notes.replace(/\n/g, '<br>')}</p>
+                    </div>
+                `;
+            }
+
+            // 组装并注入完整详细卡片 HTML
+            activeCardContainer.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-lg border border-indigo-50 overflow-hidden w-full relative card-enter">
+                    
+                    <button onclick="deleteKey('${key.id}')" class="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors bg-gray-50 rounded-full w-9 h-9 flex items-center justify-center border border-gray-100 hover:border-red-200 hover:bg-red-50 focus:outline-none" title="删除此密钥">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+
+                    <div class="p-6 sm:p-8">
+                        <!-- 标题栏 -->
+                        <div class="flex items-center gap-4 mb-6 pr-10">
+                            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-inner flex-shrink-0 text-2xl">
+                                <i class="fa-solid fa-key"></i>
+                            </div>
+                            <h3 class="font-bold text-2xl text-gray-800 truncate tracking-tight">${key.title}</h3>
+                        </div>
+
+                        <!-- 核心信息区 -->
+                        <div class="space-y-4 bg-gray-50/80 rounded-xl p-5 border border-gray-100/80">
+                            <!-- API 密钥行 -->
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div class="text-xs font-bold text-gray-500 w-24 flex-shrink-0 uppercase tracking-wider">API Key</div>
+                                <div class="flex-grow flex items-center gap-2 overflow-hidden bg-white px-3 py-2.5 rounded-lg border border-gray-200 shadow-sm transition-colors hover:border-indigo-300">
+                                    <span class="font-mono text-sm text-gray-700 truncate" id="mask-${key.id}">${maskedKey}</span>
+                                    <span class="font-mono text-sm text-gray-800 truncate hidden" id="raw-${key.id}">${key.apiKey}</span>
+                                    
+                                    <div class="flex ml-auto gap-1 border-l pl-2 border-gray-100">
+                                        <button onclick="toggleVisibility('${key.id}')" class="text-gray-400 hover:text-indigo-600 p-1.5 rounded hover:bg-indigo-50 focus:outline-none transition-colors" title="显示/隐藏">
+                                            <i class="fa-regular fa-eye" id="eye-${key.id}"></i>
+                                        </button>
+                                        <button onclick="copyToClipboard('${key.apiKey}', this)" class="text-indigo-500 hover:text-indigo-700 p-1.5 rounded hover:bg-indigo-50 focus:outline-none transition-colors" title="复制">
+                                            <i class="fa-regular fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Base URL 行 -->
+                            ${key.baseUrl ? `
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div class="text-xs font-bold text-gray-500 w-24 flex-shrink-0 uppercase tracking-wider">Base URL</div>
+                                <div class="flex-grow flex items-center gap-2 overflow-hidden bg-white px-3 py-2.5 rounded-lg border border-gray-200 shadow-sm transition-colors hover:border-indigo-300">
+                                    <span class="font-mono text-sm text-gray-600 truncate flex-grow">${key.baseUrl}</span>
+                                    <button onclick="copyToClipboard('${key.baseUrl}', this)" class="text-gray-400 hover:text-indigo-600 p-1.5 rounded hover:bg-indigo-50 focus:outline-none flex-shrink-0 transition-colors border-l border-gray-100 pl-2" title="复制链接">
+                                        <i class="fa-regular fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            ` : ''}
+                        </div>
+
+                        <!-- 模型列表 -->
+                        ${modelsHtml}
+
+                        <!-- 备注 -->
+                        ${notesHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 删除密钥
+        function deleteKey(id) {
+            keysData = keysData.filter(k => k.id !== id);
+            showToast('密钥卡片已删除', 'info');
+            updateView();
+        }
+
+        // 切换可见性
+        function toggleVisibility(id) {
+            const maskSpan = document.getElementById(`mask-${id}`);
+            const rawSpan = document.getElementById(`raw-${id}`);
+            const eyeIcon = document.getElementById(`eye-${id}`);
+
+            if (maskSpan.classList.contains('hidden')) {
+                maskSpan.classList.remove('hidden');
+                rawSpan.classList.add('hidden');
+                eyeIcon.className = 'fa-regular fa-eye';
+            } else {
+                maskSpan.classList.add('hidden');
+                rawSpan.classList.remove('hidden');
+                eyeIcon.className = 'fa-regular fa-eye-slash text-red-500';
+            }
+        }
+
+        // 复制到剪贴板
+        function copyToClipboard(text, btnElement) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+            textArea.style.opacity = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    const icon = btnElement.querySelector('i');
+                    const originalClass = icon.className;
+                    icon.className = 'fa-solid fa-check text-green-500';
+                    setTimeout(() => icon.className = originalClass, 2000);
+                    showToast('已成功复制', 'success');
+                } else {
+                    showToast('复制失败', 'error');
+                }
+            } catch (err) {
+                showToast('浏览器不支持自动复制', 'error');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // 显示 Toast 提示
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            let bgColor, icon;
+            switch(type) {
+                case 'success':
+                    bgColor = 'bg-gray-800 text-white';
+                    icon = '<i class="fa-solid fa-circle-check text-green-400 mr-2"></i>';
+                    break;
+                case 'error':
+                    bgColor = 'bg-red-50 border border-red-200 text-red-700 shadow-sm';
+                    icon = '<i class="fa-solid fa-circle-exclamation text-red-500 mr-2"></i>';
+                    break;
+                default:
+                    bgColor = 'bg-white border border-gray-200 text-gray-700 shadow-sm';
+                    icon = '<i class="fa-solid fa-circle-info text-blue-400 mr-2"></i>';
+            }
+            toast.className = `flex items-center px-4 py-3 rounded-lg shadow-lg text-sm font-medium transform transition-all duration-300 translate-y-10 opacity-0 ${bgColor}`;
+            toast.innerHTML = `${icon} ${message}`;
+            toastContainer.appendChild(toast);
+            
+            setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

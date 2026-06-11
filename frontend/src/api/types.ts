@@ -20,6 +20,35 @@ export interface Token {
   user: User;
 }
 
+export interface APIKeyItem {
+  id: number;
+  title: string;
+  api_key: string;
+  api_key_masked: string | null;
+  base_url: string | null;
+  models: string[];
+  notes: string | null;
+  owner_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface APIKeyCreateInput {
+  title: string;
+  api_key: string;
+  base_url?: string | null;
+  models?: string[];
+  notes?: string | null;
+}
+
+export interface APIKeyUpdateInput {
+  title?: string;
+  api_key?: string;
+  base_url?: string | null;
+  models?: string[];
+  notes?: string | null;
+}
+
 export type ProjectStatus =
   | "planning"
   | "active"
@@ -202,7 +231,8 @@ export type AuditTargetType =
   | "auth"
   | "db_backup"
   | "backup_setting"
-  | "prd";
+  | "prd"
+  | "managed_api_key";
 
 export interface AuditActor {
   id: number;
