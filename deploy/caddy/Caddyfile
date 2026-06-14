@@ -1,0 +1,8 @@
+isxm.cn {
+	encode zstd gzip
+	reverse_proxy frontend:80
+}
+
+www.isxm.cn {
+	redir https://isxm.cn{uri} permanent
+}
