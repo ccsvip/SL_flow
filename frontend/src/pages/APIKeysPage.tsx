@@ -6,6 +6,7 @@ import {
   Empty,
   Form,
   Input,
+  Modal,
   Skeleton,
   Space,
   Tag,
@@ -15,6 +16,7 @@ import {
 import {
   CopyOutlined,
   DeleteOutlined,
+  EditOutlined,
   EyeInvisibleOutlined,
   EyeOutlined,
   FolderOpenOutlined,
@@ -27,7 +29,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiKeys } from "@/api/client";
 import { extractError } from "@/api/http";
-import type { APIKeyCreateInput, APIKeyItem } from "@/api/types";
+import type { APIKeyCreateInput, APIKeyItem, APIKeyUpdateInput } from "@/api/types";
 import { fromNow } from "@/utils/format";
 
 interface FormShape {
@@ -89,6 +91,8 @@ export default function APIKeysPage() {
   const [form] = Form.useForm<FormShape>();
   const [activeId, setActiveId] = React.useState<number | null>(null);
   const [revealedIds, setRevealedIds] = React.useState<Set<number>>(() => new Set());
+  const [editingId, setEditingId] = React.useState<number | null>(null);
+  const [editForm] = Form.useForm<FormShape>();
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["api-keys"],
@@ -145,6 +149,43 @@ export default function APIKeysPage() {
     },
     onError: (e) => message.error(extractError(e, "保存失败")),
   });
+
+  const update = useMutation({
+    mutationFn: async () => {
+      if (!editingId) return null;
+      const values = await editForm.validateFields();
+      const payload: APIKeyUpdateInput = {
+        title: values.title.trim(),
+        api_key: values.api_key.trim(),
+        base_url: blankToNull(values.base_url),
+        models: splitModels(values.models_text),
+        notes: blankToNull(values.notes),
+      };
+      return apiKeys.update(editingId, payload);
+    },
+    onSuccess: (item) => {
+      if (!item) return;
+      qc.setQueryData<APIKeyItem[]>(["api-keys"], (old = []) =>
+        old.map((k) => (k.id === item.id ? item : k)),
+      );
+      setEditingId(null);
+      editForm.resetFields();
+      message.success("密钥更新成功");
+      qc.invalidateQueries({ queryKey: ["api-keys"] });
+    },
+    onError: (e) => message.error(extractError(e, "更新失败")),
+  });
+
+  const openEdit = (item: APIKeyItem) => {
+    editForm.setFieldsValue({
+      title: item.title,
+      api_key: item.api_key,
+      base_url: item.base_url ?? undefined,
+      models_text: item.models.join(", "),
+      notes: item.notes ?? undefined,
+    });
+    setEditingId(item.id);
+  };
 
   const remove = useMutation({
     mutationFn: apiKeys.remove,
@@ -211,13 +252,23 @@ export default function APIKeysPage() {
 
     return (
       <Card bordered={false} className="slf-api-key-active-card">
-        <Button
-          danger
-          shape="circle"
-          icon={<DeleteOutlined />}
-          className="slf-api-key-delete"
-          onClick={() => confirmDelete(active)}
-        />
+        <Space className="slf-api-key-actions">
+          <Tooltip title="编辑">
+            <Button
+              shape="circle"
+              icon={<EditOutlined />}
+              onClick={() => openEdit(active)}
+            />
+          </Tooltip>
+          <Tooltip title="删除">
+            <Button
+              danger
+              shape="circle"
+              icon={<DeleteOutlined />}
+              onClick={() => confirmDelete(active)}
+            />
+          </Tooltip>
+        </Space>
 
         <div className="slf-api-key-active-head">
           <div className="slf-api-key-active-icon">
@@ -411,6 +462,54 @@ export default function APIKeysPage() {
           </Card>
         )}
       </main>
+
+      <Modal
+        title="编辑密钥"
+        open={editingId !== null}
+        onCancel={() => {
+          setEditingId(null);
+          editForm.resetFields();
+        }}
+        onOk={() => update.mutate()}
+        confirmLoading={update.isPending}
+        okText="保存"
+        cancelText="取消"
+        destroyOnHidden
+      >
+        <Form form={editForm} layout="vertical" requiredMark={false}>
+          <Form.Item
+            label="标题"
+            name="title"
+            rules={[{ required: true, message: "请填写标题" }, { max: 128 }]}
+          >
+            <Input placeholder="例如：OpenAI 生产环境" />
+          </Form.Item>
+
+          <Form.Item
+            label="API 密钥"
+            name="api_key"
+            rules={[{ required: true, message: "请填写 API 密钥" }, { max: 4096 }]}
+          >
+            <Input.Password placeholder="sk-..." autoComplete="new-password" />
+          </Form.Item>
+
+          <Form.Item label="Base URL" name="base_url" rules={[{ max: 512 }]}>
+            <Input placeholder="https://api.openai.com/v1" />
+          </Form.Item>
+
+          <Form.Item label="可用模型" name="models_text">
+            <Input placeholder="例如：gpt-4, claude-3-opus" />
+          </Form.Item>
+
+          <Form.Item label="备注信息" name="notes" rules={[{ max: 4000 }]}>
+            <Input.TextArea
+              rows={3}
+              placeholder="用于主营业务对话，每月额度 $100"
+              style={{ resize: "none" }}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }
