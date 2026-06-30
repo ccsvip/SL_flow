@@ -18,6 +18,11 @@ class AuditAction(str, enum.Enum):
     login_failed = "login_failed"
     logout = "logout"
     password_change = "password_change"
+    # `reveal` is no longer written by any route, but historical rows with
+    # action='reveal' (API-key plaintext reveal) still exist in some databases.
+    # Keep the enum value so SQLAlchemy can deserialize those rows without
+    # raising LookupError. See migration 0010_audit_action_reveal.
+    reveal = "reveal"
 
 
 class AuditTargetType(str, enum.Enum):

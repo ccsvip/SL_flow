@@ -218,7 +218,8 @@ export type AuditAction =
   | "login"
   | "login_failed"
   | "logout"
-  | "password_change";
+  | "password_change"
+  | "reveal";
 
 export type AuditTargetType =
   | "project"

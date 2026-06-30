@@ -38,6 +38,7 @@ const ACTION_OPTIONS: { value: AuditAction; label: string; color: string }[] = [
   { value: "login_failed", label: "登录失败", color: "volcano" },
   { value: "logout", label: "登出", color: "default" },
   { value: "password_change", label: "改密码", color: "purple" },
+  { value: "reveal", label: "揭示", color: "magenta" },
 ];
 const ACTION_BY_VALUE = Object.fromEntries(
   ACTION_OPTIONS.map((o) => [o.value, o]),
