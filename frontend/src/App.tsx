@@ -17,7 +17,6 @@ import UsersPage from "@/pages/UsersPage";
 import SettingsPage from "@/pages/SettingsPage";
 import AISettingsPage from "@/pages/AISettingsPage";
 import SystemPage from "@/pages/SystemPage";
-import OpsPage from "@/pages/OpsPage";
 import AuditLogsPage from "@/pages/AuditLogsPage";
 import BackupsPage from "@/pages/BackupsPage";
 import PRDListPage from "@/pages/PRDListPage";
@@ -90,14 +89,6 @@ export default function App() {
           element={
             <RequireAdmin>
               <AISettingsPage />
-            </RequireAdmin>
-          }
-        />
-        <Route
-          path="ops"
-          element={
-            <RequireAdmin>
-              <OpsPage />
             </RequireAdmin>
           }
         />

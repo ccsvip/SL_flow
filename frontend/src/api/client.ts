@@ -345,8 +345,3 @@ export const dbBackups = {
   updateSettings: (data: BackupSettingUpdate) =>
     http.patch<BackupSetting>("/db-backups/settings", data).then((r) => r.data),
 };
-
-// --- Ops dashboard -------------------------------------------------------
-export const ops = {
-  overview: () => http.get<import("./types").OpsOverview>("/ops/overview").then((r) => r.data),
-};
