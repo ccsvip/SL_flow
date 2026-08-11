@@ -34,3 +34,6 @@ backend/.alembic_initialized
 
 # npm lock - the project intentionally does not pin node deps here.
 frontend/package-lock.json
+
+# AI tools - CLAUDE.md is a local duplicate of AGENTS.md
+CLAUDE.md
