@@ -22,7 +22,6 @@ from app.api.routes import (
     prd,
     projects,
     stories,
-    system,
     tasks,
     users,
 )
@@ -77,7 +76,6 @@ def create_app() -> FastAPI:
     api.include_router(api_keys.router)
     api.include_router(prd.router)
     api.include_router(dashboard.router)
-    api.include_router(system.router)
     api.include_router(audit_logs.router)
     api.include_router(db_backups.router)
 

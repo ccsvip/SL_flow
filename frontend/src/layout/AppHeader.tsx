@@ -8,14 +8,11 @@ import {
   Modal,
   Space,
   Tooltip,
-  Typography,
 } from "antd";
 import {
   BellOutlined,
   BgColorsOutlined,
   BulbOutlined,
-  CloudSyncOutlined,
-  DownloadOutlined,
   KeyOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -26,16 +23,15 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { useAuthStore } from "@/store/auth";
 import { useUIStore, ACCENT_PRESETS, AccentName } from "@/store/ui";
-import { notifications, system } from "@/api/client";
+import { notifications } from "@/api/client";
 import { http } from "@/api/http";
 import ChangePasswordModal from "@/components/modals/ChangePasswordModal";
 import { initials } from "@/utils/format";
-import UpdateModal from "@/components/modals/UpdateModal";
 
 const { Header } = Layout;
 
@@ -81,9 +77,7 @@ export default function AppHeader() {
 
   const navigate = useNavigate();
   const { modal } = AntdApp.useApp();
-  const qc = useQueryClient();
   const [pwOpen, setPwOpen] = useState(false);
-  const [updateOpen, setUpdateOpen] = useState(false);
   const headerAvatar = useHeaderAvatar(user?.avatar);
 
   // Unread notification count - polled every 30s. Cheap query (one
@@ -94,23 +88,6 @@ export default function AppHeader() {
     refetchInterval: 30_000,
     enabled: !!user,
   });
-
-  const { data: version } = useQuery({
-    queryKey: ["version"],
-    queryFn: system.version,
-    refetchInterval: 60_000,
-    enabled: !!user,
-  });
-
-  const { data: updateInfo } = useQuery({
-    queryKey: ["update-poll"],
-    queryFn: () =>
-      system.checkUpdate().catch(() => null), // silent failure for non-admin / non-git
-    refetchInterval: 5 * 60_000,
-    enabled: !!user && user.role === "admin",
-  });
-
-  const updateAvailable = !!updateInfo?.update_available;
 
   return (
     <>
@@ -131,28 +108,9 @@ export default function AppHeader() {
             onClick={toggleCollapsed}
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
           />
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            v{version?.app_version || "—"}{" "}
-            {version?.git?.branch ? `· ${version.git.branch}` : ""}
-          </Typography.Text>
         </Space>
 
         <Space size="small">
-          {user?.role === "admin" && (
-            <Tooltip title={updateAvailable ? "有新版本可用，点击查看" : "检查更新"}>
-              <Badge dot={updateAvailable} color="red">
-                <Button
-                  type="text"
-                  icon={<CloudSyncOutlined />}
-                  onClick={() => {
-                    qc.invalidateQueries({ queryKey: ["update-poll"] });
-                    setUpdateOpen(true);
-                  }}
-                />
-              </Badge>
-            </Tooltip>
-          )}
-
           <Dropdown
             trigger={["click"]}
             menu={{
@@ -280,7 +238,6 @@ export default function AppHeader() {
       </Header>
 
       <ChangePasswordModal open={pwOpen} onClose={() => setPwOpen(false)} />
-      <UpdateModal open={updateOpen} onClose={() => setUpdateOpen(false)} />
     </>
   );
 }

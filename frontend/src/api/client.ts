@@ -38,10 +38,8 @@ import type {
   Project,
   RestoreResult,
   Story,
-  SystemVersion,
   Task,
   Token,
-  UpdateInfo,
   User,
 } from "./types";
 
@@ -300,17 +298,6 @@ export const prd = {
 
   removeRequirement: (req_id: number) =>
     http.delete(`/prd/requirements/${req_id}`).then(() => true),
-};
-
-// --- System --------------------------------------------------------------
-export const system = {
-  version: () => http.get<SystemVersion>("/system/version").then((r) => r.data),
-  checkUpdate: () => http.post<UpdateInfo>("/system/check-update").then((r) => r.data),
-  applyUpdate: () =>
-    http
-      .post<{ status: string; message: string }>("/system/apply-update")
-      .then((r) => r.data),
-  updateLog: () => http.get<{ log: string }>("/system/update-log").then((r) => r.data),
 };
 
 // --- Audit logs ----------------------------------------------------------

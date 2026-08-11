@@ -10,7 +10,6 @@ import {
   CalendarOutlined,
   TeamOutlined,
   SettingOutlined,
-  CloudSyncOutlined,
   HistoryOutlined,
   KeyOutlined,
   ThunderboltOutlined,
@@ -40,7 +39,6 @@ export default function AppSider() {
       { key: "/bugs", icon: <BugOutlined />, label: "缺陷" },
       { key: "/calendar", icon: <CalendarOutlined />, label: "日历" },
       { key: "/audit-logs", icon: <HistoryOutlined />, label: "操作日志" },
-      { key: "/system", icon: <CloudSyncOutlined />, label: "版本与更新" },
       { key: "/settings", icon: <SettingOutlined />, label: "个人设置" },
     ];
     if (role === "admin") {

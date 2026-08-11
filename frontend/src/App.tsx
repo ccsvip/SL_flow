@@ -16,7 +16,6 @@ import NotificationsPage from "@/pages/NotificationsPage";
 import UsersPage from "@/pages/UsersPage";
 import SettingsPage from "@/pages/SettingsPage";
 import AISettingsPage from "@/pages/AISettingsPage";
-import SystemPage from "@/pages/SystemPage";
 import AuditLogsPage from "@/pages/AuditLogsPage";
 import BackupsPage from "@/pages/BackupsPage";
 import PRDListPage from "@/pages/PRDListPage";
@@ -92,7 +91,6 @@ export default function App() {
             </RequireAdmin>
           }
         />
-        <Route path="system" element={<SystemPage />} />
         <Route path="audit-logs" element={<AuditLogsPage />} />
         <Route
           path="backups"
