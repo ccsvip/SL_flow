@@ -79,7 +79,24 @@ services:
     ports:
       - "${FRONTEND_PORT:-8080}:80"
 
+  caddy:
+    image: caddy:2-alpine
+    container_name: slflow-caddy
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
 volumes:
   db_data:
   uploads:
   backups:
+  caddy_data:
+  caddy_config:
