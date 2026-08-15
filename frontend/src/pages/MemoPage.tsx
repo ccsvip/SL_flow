@@ -17,7 +17,6 @@ import {
   EyeOutlined,
   FileTextOutlined,
   FolderOpenOutlined,
-  PinFilled,
   PushpinOutlined,
   PushpinFilled,
   PlusOutlined,

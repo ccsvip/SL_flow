@@ -14,7 +14,7 @@ import {
   KeyOutlined,
   ThunderboltOutlined,
   ReadOutlined,
-  NotebookOutlined,
+  BookOutlined,
 } from "@ant-design/icons";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -39,7 +39,7 @@ export default function AppSider() {
       { key: "/tasks", icon: <CheckSquareOutlined />, label: "任务" },
       { key: "/bugs", icon: <BugOutlined />, label: "缺陷" },
       { key: "/calendar", icon: <CalendarOutlined />, label: "日历" },
-      { key: "/memos", icon: <NotebookOutlined />, label: "备忘录" },
+      { key: "/memos", icon: <BookOutlined />, label: "备忘录" },
       { key: "/audit-logs", icon: <HistoryOutlined />, label: "操作日志" },
       { key: "/settings", icon: <SettingOutlined />, label: "个人设置" },
     ];
