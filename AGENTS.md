@@ -1,19 +1,18 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **SL_flow** (8058 symbols, 15668 relationships, 106 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **SL_flow** (2529 symbols, 4262 relationships, 93 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
 
 ## Always Do
 
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user. For unified PDG impact, add `mode: "pdg"` with optional `line: <N>` — it returns statement-level `affectedStatements` over CDG + REACHING_DEF and inter-procedural symbols in `interproceduralByDepth`/`byDepth`; no-layer/degraded PDG results are UNKNOWN-risk notes (`--pdg` layer).
+- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
 - **MUST run `detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows. For regression review, compare against the default branch: `detect_changes({scope: "compare", base_ref: "master"})`.
 - **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
 - When exploring unfamiliar code, use `query({search_query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
 - When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `context({name: "symbolName"})`.
 - For security review, `explain({target: "fileOrSymbol"})` lists taint findings (source→sink flows; needs `analyze --pdg`).
-- For control/data dependence, `pdg_query({mode: "controls", target: "fileOrSymbol"})` answers "under what condition does X run?" (CDG, incl. guard clauses) and `pdg_query({mode: "flows", target, variable})` traces "where does variable Y flow?" (REACHING_DEF). `--pdg` layer.
 
 ## Never Do
 
@@ -41,17 +40,5 @@ This project is indexed by GitNexus as **SL_flow** (8058 symbols, 15668 relation
 | Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
 | Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-| Work in the Routes area (155 symbols) | `.claude/skills/generated/routes/SKILL.md` |
-| Work in the Pages area (90 symbols) | `.claude/skills/generated/pages/SKILL.md` |
-| Work in the Components area (30 symbols) | `.claude/skills/generated/components/SKILL.md` |
-| Work in the Schemas area (19 symbols) | `.claude/skills/generated/schemas/SKILL.md` |
-| Work in the Models area (17 symbols) | `.claude/skills/generated/models/SKILL.md` |
-| Work in the Cluster_29 area (14 symbols) | `.claude/skills/generated/cluster-29/SKILL.md` |
-| Work in the Api area (13 symbols) | `.claude/skills/generated/api/SKILL.md` |
-| Work in the App area (5 symbols) | `.claude/skills/generated/app/SKILL.md` |
-| Work in the Drawers area (5 symbols) | `.claude/skills/generated/drawers/SKILL.md` |
-| Work in the Cluster_28 area (4 symbols) | `.claude/skills/generated/cluster-28/SKILL.md` |
-| Work in the Cluster_47 area (4 symbols) | `.claude/skills/generated/cluster-47/SKILL.md` |
-| Work in the Layout area (3 symbols) | `.claude/skills/generated/layout/SKILL.md` |
 
 <!-- gitnexus:end -->

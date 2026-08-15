@@ -22,6 +22,9 @@ import type {
   DashboardOverview,
   DBBackup,
   DBBackupPage,
+  MemoCreateInput,
+  MemoItem,
+  MemoUpdateInput,
   NotificationsPage,
   PRDConvertResult,
   PRDDocument,
@@ -331,4 +334,17 @@ export const dbBackups = {
     http.get<BackupSetting>("/db-backups/settings").then((r) => r.data),
   updateSettings: (data: BackupSettingUpdate) =>
     http.patch<BackupSetting>("/db-backups/settings", data).then((r) => r.data),
+};
+
+// --- Memos ---------------------------------------------------------------
+export const memos = {
+  list: (params?: { q?: string; category?: string }) =>
+    http.get<MemoItem[]>("/memos", { params }).then((r) => r.data),
+  categories: () =>
+    http.get<string[]>("/memos/categories").then((r) => r.data),
+  create: (data: MemoCreateInput) =>
+    http.post<MemoItem>("/memos", data).then((r) => r.data),
+  update: (id: number, data: MemoUpdateInput) =>
+    http.patch<MemoItem>(`/memos/${id}`, data).then((r) => r.data),
+  remove: (id: number) => http.delete(`/memos/${id}`).then(() => true),
 };

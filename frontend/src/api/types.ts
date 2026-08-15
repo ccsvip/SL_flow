@@ -512,3 +512,30 @@ export interface PRDRequirementCreate {
   tag?: string;
   order_index?: number;
 }
+
+// Memos ---------------------------------------------------------------------
+
+export interface MemoItem {
+  id: number;
+  title: string;
+  content: string | null;
+  category: string | null;
+  pinned: boolean;
+  owner_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MemoCreateInput {
+  title: string;
+  content?: string | null;
+  category?: string | null;
+  pinned?: boolean;
+}
+
+export interface MemoUpdateInput {
+  title?: string;
+  content?: string | null;
+  category?: string | null;
+  pinned?: boolean;
+}

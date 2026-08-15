@@ -14,6 +14,7 @@ from app.models.notification import (
 )
 from app.models.ai_setting import AISetting
 from app.models.api_key import APIKey
+from app.models.memo import Memo
 from app.models.prd import (
     PRDDocument,
     PRDRequirement,
@@ -59,4 +60,5 @@ __all__ = [
     "PRDSourceType",
     "PRDStatus",
     "PRDPriority",
+    "Memo",
 ]

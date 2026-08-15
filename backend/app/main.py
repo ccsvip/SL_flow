@@ -18,6 +18,7 @@ from app.api.routes import (
     comments,
     dashboard,
     db_backups,
+    memos,
     notifications,
     prd,
     projects,
@@ -78,6 +79,7 @@ def create_app() -> FastAPI:
     api.include_router(dashboard.router)
     api.include_router(audit_logs.router)
     api.include_router(db_backups.router)
+    api.include_router(memos.router)
 
     @api.get("/healthz")
     async def healthz() -> dict[str, str]:

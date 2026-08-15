@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VitePress Studio - Web Documentation Platform</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              vp: '#10b981', // VitePress Green
+            },
+            darkbg: '#1b1b1f',
+            darkcard: '#202127',
+            darkborder: '#2e2e32',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React & ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- Babel for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- Marked parser for Markdown -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  
+  <!-- Highlight.js for Code Highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Custom Scrollbar & Typography Styles -->
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.4);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(156, 163, 175, 0.6);
+    }
+
+    /* VitePress Typography Styling */
+    .vp-doc h1 { font-size: 2.25rem; font-weight: 800; margin-bottom: 1.25rem; border-bottom: 1px solid rgba(156, 163, 175, 0.2); padding-bottom: 0.5rem; letter-spacing: -0.02em; }
+    .vp-doc h2 { font-size: 1.5rem; font-weight: 700; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(156, 163, 175, 0.15); padding-bottom: 0.375rem; letter-spacing: -0.01em; scroll-margin-top: 5rem; }
+    .vp-doc h3 { font-size: 1.25rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; scroll-margin-top: 5rem; }
+    .vp-doc h4 { font-size: 1rem; font-weight: 600; margin-top: 1.25rem; margin-bottom: 0.5rem; }
+    .vp-doc p { margin-bottom: 1rem; line-height: 1.7; color: inherit; }
+    .vp-doc ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+    .vp-doc ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
+    .vp-doc li { margin-bottom: 0.375rem; line-height: 1.6; }
+    .vp-doc blockquote { border-left: 4px solid #10b981; padding-left: 1rem; margin: 1rem 0; opacity: 0.9; font-style: italic; }
+    .vp-doc code:not(pre code) { background-color: rgba(110, 118, 129, 0.18); padding: 0.2em 0.4em; border-radius: 6px; font-size: 0.875em; font-family: monospace; }
+    .vp-doc pre { background-color: #1e1e22; border-radius: 8px; padding: 1rem; margin: 1rem 0; overflow-x: auto; border: 1px solid rgba(255, 255, 255, 0.1); }
+    .vp-doc pre code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.9em; }
+    .vp-doc table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.95rem; }
+    .vp-doc th, .vp-doc td { border: 1px solid rgba(156, 163, 175, 0.25); padding: 0.6rem 1rem; text-align: left; }
+    .vp-doc th { background-color: rgba(156, 163, 175, 0.1); font-weight: 600; }
+    .vp-doc hr { border: 0; border-top: 1px solid rgba(156, 163, 175, 0.2); margin: 2rem 0; }
+    .vp-doc a { color: #10b981; text-decoration: none; font-weight: 500; }
+    .vp-doc a:hover { text-decoration: underline; }
+
+    /* Custom Callouts (VitePress Containers) */
+    .custom-block { padding: 1rem 1.25rem; margin: 1.25rem 0; border-radius: 8px; border-left-width: 4px; font-size: 0.95rem; }
+    .custom-block.info { background-color: rgba(16, 185, 129, 0.08); border-color: #10b981; }
+    .custom-block.warning { background-color: rgba(245, 158, 11, 0.08); border-color: #f59e0b; }
+    .custom-block.danger { background-color: rgba(239, 68, 68, 0.08); border-color: #ef4444; }
+    .custom-block.tip { background-color: rgba(59, 130, 246, 0.08); border-color: #3b82f6; }
+    .custom-block-title { font-weight: 700; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem; }
+  </style>
+</head>
+<body class="bg-white dark:bg-darkbg text-gray-800 dark:text-gray-200 antialiased min-h-screen transition-colors duration-200">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useMemo } = React;
+
+    // Default Initial Navigation and Documentation Content
+    const INITIAL_DOC_TREE = [
+      {
+        id: 'cat-getting-started',
+        title: '快速入门',
+        items: [
+          {
+            id: 'doc-intro',
+            title: '什么是 VitePress？',
+            content: `# 什么是 VitePress？
+
+VitePress 是一个由 Vite 和 Vue 驱动的静态站点生成器 (SSG)。它旨在提供极佳的开发者体验和极快的前端加载速度。
+
+::: info
+提示：这是一个基于在线编辑器的 VitePress 交互式体验系统。您可以在右上角切换 **阅读模式**、**实时编辑** 或 **查看 Markdown 源码**！
+:::
+
+## 核心特性
+
+- **极速热更新**：基于 Vite，毫秒级响应
+- ** Markdown 增强**：支持 YAML frontmatter、代码高亮、提示框等
+- **内置搜索**：高效的本地与离线快速检索
+- **响应式设计**：专为移动端与桌面端优化的 VitePress UI
+
+## 代码高亮示例
+
+\`\`\`javascript
+// 初始化 VitePress 配置
+import { defineConfig } from 'vitepress'
+
+export default defineConfig({
+  title: 'My Docs',
+  description: '快速构建文档平台',
+  themeConfig: {
+    nav: [{ text: '指南', link: '/guide/' }],
+    sidebar: [/* ... */]
+  }
+})
+\`\`\`
+
+## 快速提示框 (Containers)
+
+::: tip
+**小技巧**：在编辑模式下，您可以随时编写自定义提示块。
+:::
+
+::: warning
+**注意**：编辑后的所有内容将自动实时保存至您的浏览器 LocalStorage 存储中。
+:::
+
+::: danger
+**警告**：删除文档或分类后不可撤销，请谨慎操作！
+:::
+
+## 数据列表与表格
+
+| 功能特性 | VitePress | 传统文档工具 |
+| :--- | :---: | :---: |
+| 启动速度 | ⚡ 毫秒级 | 🐌 较慢 |
+| 实时编辑 |  支持 | ❌ 不支持 |
+| Markdown 扩展 |  丰富 | ⚪ 普通 |
+`
+          },
+          {
+            id: 'doc-quickstart',
+            title: '快速安装与上手',
+            content: `# 快速安装与上手
+
+只需简单的几步，即可开始构建您的完美文档库。
+
+## 环境要求
+
+- **Node.js**: 18.0.0 或更高版本
+- **包管理器**: npm, pnpm 或 yarn
+
+## 安装命令
+
+\`\`\`bash
+# 使用 pnpm 创建新项目
+pnpm add -D vitepress
+
+# 运行初始化向导
+pnpm vitepress init
+\`\`\`
+
+## 目录结构
+
+建议的 VitePress 目录组织架构：
+
+\`\`\`text
+.
+├── docs
+│   ├── index.md
+│   ├── guide
+│   │   ├── getting-started.md
+│   │   └── api.md
+│   └── .vitepress
+│       └── config.js
+└── package.json
+\`\`\`
+
+> 💡 **提示**：点击右侧侧边栏中的标题，可以快速跳转至对应章节。`
+          }
+        ]
+      },
+      {
+        id: 'cat-guides',
+        title: '指南与深入',
+        items: [
+          {
+            id: 'doc-markdown-syntax',
+            title: 'Markdown 语法指南',
+            content: `# Markdown 语法指南
+
+本项目完整支持标准 Markdown 语法及常用的扩展语法。
+
+## 文本样式
+
+- **加粗文本** (**Bold**)
+- *斜体文本* (*Italic*)
+- ~~删除线~~ (~~Strikethrough~~)
+- \`行内代码\` (\`Inline Code\`)
+
+## 任务列表
+
+- [x] 安装 VitePress Studio
+- [x] 体验编辑功能
+- [ ] 导出文档配置
+
+## 引用块
+
+> 编写清晰的文档是优秀软件项目的核心基石之一。
+> —— 开发者名言`
+          },
+          {
+            id: 'doc-api',
+            title: 'API 接口文档',
+            content: `# API 接口文档
+
+配置项及核心 API 的参考列表。
+
+## \`useData()\`
+
+获取当前页面的元数据与全局配置。
+
+\`\`\`typescript
+interface VitePressData {
+  site: Ref<SiteData>
+  page: Ref<PageData>
+  theme: Ref<any>
+  frontmatter: Ref<Record<string, any>>
+}
+\`\`\`
+
+## \`useRoute()\`
+
+返回当前路由对象状态。`
+          }
+        ]
+      }
+    ];
+
+    // Helper to process VitePress containers (::: info, ::: warning, etc.)
+    function processVitePressContainers(mdText) {
+      if (!mdText) return '';
+      let processed = mdText.replace(/^:::\s*(info|warning|danger|tip)\s*([\s\S]*?)\n:::/gm, (match, type, content) => {
+        const titleMap = {
+          info: '信息',
+          warning: '注意',
+          danger: '警告',
+          tip: '提示'
+        };
+        const title = titleMap[type] || type.toUpperCase();
+        return `<div class="custom-block ${type}">
+          <div class="custom-block-title">${title}</div>
+          <div>${marked.parse(content.trim())}</div>
+        </div>`;
+      });
+      return processed;
+    }
+
+    // Main App Component
+    function App() {
+      // Storage State
+      const [docTree, setDocTree] = useState(() => {
+        const saved = localStorage.getItem('vp_studio_tree');
+        return saved ? JSON.parse(saved) : INITIAL_DOC_TREE;
+      });
+
+      const [activeDocId, setActiveDocId] = useState(() => {
+        const saved = localStorage.getItem('vp_studio_active');
+        return saved || 'doc-intro';
+      });
+
+      // View Mode: 'read' | 'edit' | 'split' | 'raw'
+      const [viewMode, setViewMode] = useState('read');
+      const [darkTheme, setDarkTheme] = useState(true);
+      const [sidebarOpen, setSidebarOpen] = useState(true);
+      const [collapsedCats, setCollapsedCats] = useState({});
+      const [searchQuery, setSearchQuery] = useState('');
+      const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+      // Category / Item Edit Modal/Inline States
+      const [editingTitle, setEditingTitle] = useState(null); // { id, title }
+      const [newCategoryTitle, setNewCategoryTitle] = useState('');
+      const [isAddingCategory, setIsAddingCategory] = useState(false);
+
+      // Toc State
+      const [toc, setToc] = useState([]);
+
+      // Find Active Document
+      const activeDoc = useMemo(() => {
+        for (const cat of docTree) {
+          const item = cat.items.find(doc => doc.id === activeDocId);
+          if (item) return item;
+        }
+        return docTree[0]?.items[0] || null;
+      }, [docTree, activeDocId]);
+
+      // Save to localStorage
+      useEffect(() => {
+        localStorage.setItem('vp_studio_tree', JSON.stringify(docTree));
+      }, [docTree]);
+
+      useEffect(() => {
+        localStorage.setItem('vp_studio_active', activeDocId);
+      }, [activeDocId]);
+
+      // Theme toggle effect
+      useEffect(() => {
+        if (darkTheme) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }, [darkTheme]);
+
+      // Re-initialize Lucide Icons after render
+      useEffect(() => {
+        if (window.lucide) {
+          window.lucide.createIcons();
+        }
+      });
+
+      // Parse TOC from Active Doc Content
+      useEffect(() => {
+        if (!activeDoc) return;
+        const headings = [];
+        const lines = activeDoc.content.split('\n');
+        lines.forEach(line => {
+          const match = line.match(/^(#{2,3})\s+(.+)$/);
+          if (match) {
+            const level = match[1].length; // 2 for h2, 3 for h3
+            const text = match[2].trim().replace(/[*_~`]/g, '');
+            const id = text.toLowerCase().replace(/[^\w\u4e00-\u9fa5]+/g, '-');
+            headings.push({ level, text, id });
+          }
+        });
+        setToc(headings);
+      }, [activeDoc]);
+
+      // Update Document Content
+      const updateDocContent = (newContent) => {
+        if (!activeDoc) return;
+        setDocTree(prev => prev.map(cat => ({
+          ...cat,
+          items: cat.items.map(item => item.id === activeDoc.id ? { ...item, content: newContent } : item)
+        })));
+      };
+
+      // Add New Document under Category
+      const handleAddDoc = (catId) => {
+        const title = prompt('请输入新文档名称：', '未命名文档');
+        if (!title) return;
+        const newId = 'doc-' + Date.now();
+        const newDocItem = {
+          id: newId,
+          title: title,
+          content: `# ${title}\n\n开始撰写您的文档内容...`
+        };
+
+        setDocTree(prev => prev.map(cat => {
+          if (cat.id === catId) {
+            return { ...cat, items: [...cat.items, newDocItem] };
+          }
+          return cat;
+        }));
+        setActiveDocId(newId);
+        setViewMode('edit');
+      };
+
+      // Delete Document
+      const handleDeleteDoc = (e, docId) => {
+        e.stopPropagation();
+        if (!confirm('确定要删除此文档吗？')) return;
+        
+        let nextActiveId = activeDocId;
+        setDocTree(prev => {
+          const updated = prev.map(cat => ({
+            ...cat,
+            items: cat.items.filter(item => item.id !== docId)
+          }));
+          
+          // Select fallback active doc if deleted
+          if (activeDocId === docId) {
+            for (const cat of updated) {
+              if (cat.items.length > 0) {
+                nextActiveId = cat.items[0].id;
+                break;
+              }
+            }
+          }
+          return updated;
+        });
+
+        if (nextActiveId !== activeDocId) {
+          setActiveDocId(nextActiveId);
+        }
+      };
+
+      // Add New Category
+      const handleAddCategory = () => {
+        if (!newCategoryTitle.trim()) return;
+        const newCat = {
+          id: 'cat-' + Date.now(),
+          title: newCategoryTitle.trim(),
+          items: []
+        };
+        setDocTree(prev => [...prev, newCat]);
+        setNewCategoryTitle('');
+        setIsAddingCategory(false);
+      };
+
+      // Delete Category
+      const handleDeleteCategory = (catId) => {
+        if (!confirm('确定要删除整个分类及其下属所有文档吗？')) return;
+        setDocTree(prev => prev.filter(c => c.id !== catId));
+      };
+
+      // Rename Document or Category
+      const handleRename = (id, isCat) => {
+        const currentTitle = isCat 
+          ? docTree.find(c => c.id === id)?.title 
+          : activeDoc?.title;
+        const newTitle = prompt('重命名为：', currentTitle);
+        if (!newTitle || !newTitle.trim()) return;
+
+        setDocTree(prev => prev.map(cat => {
+          if (isCat && cat.id === id) {
+            return { ...cat, title: newTitle.trim() };
+          }
+          if (!isCat) {
+            return {
+              ...cat,
+              items: cat.items.map(item => item.id === id ? { ...item, title: newTitle.trim() } : item)
+            };
+          }
+          return cat;
+        }));
+      };
+
+      // Toggle Category Accordion
+      const toggleCategory = (catId) => {
+        setCollapsedCats(prev => ({ ...prev, [catId]: !prev[catId] }));
+      };
+
+      // Render Markdown HTML Content
+      const renderedHtml = useMemo(() => {
+        if (!activeDoc) return '';
+        try {
+          const processedMd = processVitePressContainers(activeDoc.content);
+          const rawHtml = marked.parse(processedMd);
+          return rawHtml;
+        } catch (err) {
+          return `<p class="text-red-500">Markdown 解析错误: ${err.message}</p>`;
+        }
+      }, [activeDoc?.content]);
+
+      // Highlight code blocks on render
+      useEffect(() => {
+        document.querySelectorAll('pre code').forEach((block) => {
+          hljs.highlightElement(block);
+        });
+      }, [renderedHtml, viewMode]);
+
+      // Copy text helper
+      const copyToClipboard = (text) => {
+        navigator.clipboard.writeText(text);
+        alert('已成功复制到剪贴板！');
+      };
+
+      // Filtered search docs
+      const searchResults = useMemo(() => {
+        if (!searchQuery.trim()) return [];
+        const results = [];
+        docTree.forEach(cat => {
+          cat.items.forEach(doc => {
+            if (doc.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                doc.content.toLowerCase().includes(searchQuery.toLowerCase())) {
+              results.push({ ...doc, category: cat.title });
+            }
+          });
+        });
+        return results;
+      }, [searchQuery, docTree]);
+
+      return (
+        <div class="flex flex-col h-screen overflow-hidden text-sm">
+          {/* TOP NAVBAR */}
+          <header class="h-14 bg-white dark:bg-darkcard border-b border-gray-200 dark:border-darkborder px-4 flex items-center justify-between z-30 shrink-0">
+            <div class="flex items-center gap-3">
+              <button 
+                onClick={() => setSidebarOpen(!sidebarOpen)} 
+                class="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors md:hidden"
+                title="切换侧边栏"
+              >
+                <i data-lucide="menu" class="w-5 h-5"></i>
+              </button>
+
+              <div class="flex items-center gap-2.5 font-bold text-lg text-gray-900 dark:text-white cursor-pointer" onClick={() => setActiveDocId('doc-intro')}>
+                <div class="w-7 h-7 rounded-lg bg-brand-500 flex items-center justify-center text-white text-base shadow-sm font-black">
+                  V
+                </div>
+                <span>VitePress <span class="text-brand-500 font-normal">Studio</span></span>
+              </div>
+            </div>
+
+            {/* Global Search Bar */}
+            <div class="hidden sm:flex items-center flex-1 max-w-md mx-6">
+              <button 
+                onClick={() => setIsSearchOpen(true)}
+                class="w-full flex items-center justify-between px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800/70 border border-transparent hover:border-gray-300 dark:hover:border-gray-700 text-gray-400 text-xs transition-all"
+              >
+                <span class="flex items-center gap-2">
+                  <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                  搜索文档内容...
+                </span>
+                <kbd class="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-mono text-[10px]">Ctrl K</kbd>
+              </button>
+            </div>
+
+            {/* View Mode & Actions Controls */}
+            <div class="flex items-center gap-2">
+              <div class="bg-gray-100 dark:bg-gray-800 p-1 rounded-lg flex items-center gap-1 border border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setViewMode('read')}
+                  class={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
+                    viewMode === 'read' ? 'bg-white dark:bg-darkbg text-brand-600 dark:text-brand-500 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900'
+                  }`}
+                  title="完全渲染模式"
+                >
+                  <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                  <span class="hidden md:inline">阅读模式</span>
+                </button>
+
+                <button
+                  onClick={() => setViewMode('split')}
+                  class={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
+                    viewMode === 'split' ? 'bg-white dark:bg-darkbg text-brand-600 dark:text-brand-500 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900'
+                  }`}
+                  title="编辑与实时双栏预览"
+                >
+                  <i data-lucide="columns" class="w-3.5 h-3.5"></i>
+                  <span class="hidden md:inline">实时双栏</span>
+                </button>
+
+                <button
+                  onClick={() => setViewMode('edit')}
+                  class={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
+                    viewMode === 'edit' ? 'bg-white dark:bg-darkbg text-brand-600 dark:text-brand-500 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900'
+                  }`}
+                  title="全屏编辑模式"
+                >
+                  <i data-lucide="file-edit" class="w-3.5 h-3.5"></i>
+                  <span class="hidden md:inline">仅编辑</span>
+                </button>
+
+                <button
+                  onClick={() => setViewMode('raw')}
+                  class={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
+                    viewMode === 'raw' ? 'bg-white dark:bg-darkbg text-brand-600 dark:text-brand-500 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900'
+                  }`}
+                  title="Markdown 原始代码"
+                >
+                  <i data-lucide="code" class="w-3.5 h-3.5"></i>
+                  <span class="hidden md:inline">原格式</span>
+                </button>
+              </div>
+
+              <div class="h-4 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
+
+              {/* Theme Toggle Button */}
+              <button
+                onClick={() => setDarkTheme(!darkTheme)}
+                class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
+                title={darkTheme ? "切换浅色模式" : "切换暗黑模式"}
+              >
+                <i data-lucide={darkTheme ? "sun" : "moon"} class="w-4 h-4"></i>
+              </button>
+            </div>
+          </header>
+
+          {/* MAIN LAYOUT BODY */}
+          <div class="flex flex-1 overflow-hidden relative">
+            {/* LEFT SIDEBAR NAVIGATION */}
+            <aside class={`
+              w-64 bg-gray-50 dark:bg-darkcard border-r border-gray-200 dark:border-darkborder flex flex-col shrink-0 transition-all duration-200 z-20
+              absolute md:relative inset-y-0 left-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+            `}>
+              <div class="p-3 border-b border-gray-200 dark:border-darkborder flex items-center justify-between">
+                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">文档目录 (Navigation)</span>
+                <button 
+                  onClick={() => setIsAddingCategory(true)}
+                  class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors text-xs flex items-center gap-1"
+                  title="新增分组"
+                >
+                  <i data-lucide="folder-plus" class="w-3.5 h-3.5"></i>
+                  <span>新分类</span>
+                </button>
+              </div>
+
+              {/* Add Category Form */}
+              {isAddingCategory && (
+                <div class="p-2.5 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex flex-col gap-2">
+                  <input
+                    type="text"
+                    placeholder="分类名称..."
+                    value={newCategoryTitle}
+                    onChange={(e) => setNewCategoryTitle(e.target.value)}
+                    class="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-900 focus:outline-none focus:border-brand-500"
+                    autoFocus
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+                  />
+                  <div class="flex justify-end gap-1">
+                    <button 
+                      onClick={() => setIsAddingCategory(false)}
+                      class="px-2 py-0.5 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                    >
+                      取消
+                    </button>
+                    <button 
+                      onClick={handleAddCategory}
+                      class="px-2.5 py-0.5 text-xs bg-brand-500 text-white rounded hover:bg-brand-600"
+                    >
+                      确定
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Sidebar Menu Tree */}
+              <div class="flex-1 overflow-y-auto p-2 space-y-4">
+                {docTree.map(category => (
+                  <div key={category.id} class="space-y-1">
+                    {/* Category Header */}
+                    <div class="group flex items-center justify-between px-2 py-1 text-xs font-bold text-gray-700 dark:text-gray-300 hover:text-brand-500 cursor-pointer">
+                      <div class="flex items-center gap-1.5 flex-1" onClick={() => toggleCategory(category.id)}>
+                        <i data-lucide={collapsedCats[category.id] ? "chevron-right" : "chevron-down"} class="w-3.5 h-3.5 text-gray-400"></i>
+                        <span>{category.title}</span>
+                      </div>
+                      
+                      <div class="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                        <button 
+                          onClick={() => handleAddDoc(category.id)} 
+                          class="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500"
+                          title="在该分类下新建文档"
+                        >
+                          <i data-lucide="plus" class="w-3 h-3"></i>
+                        </button>
+                        <button 
+                          onClick={() => handleRename(category.id, true)} 
+                          class="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500"
+                          title="重命名分类"
+                        >
+                          <i data-lucide="edit-2" class="w-3 h-3"></i>
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteCategory(category.id)} 
+                          class="p-0.5 hover:bg-red-100 dark:hover:bg-red-900/40 rounded text-red-500"
+                          title="删除分类"
+                        >
+                          <i data-lucide="trash-2" class="w-3 h-3"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Documents List */}
+                    {!collapsedCats[category.id] && (
+                      <div class="pl-4 space-y-0.5 border-l border-gray-200 dark:border-gray-800 ml-2.5">
+                        {category.items.map(doc => {
+                          const isActive = doc.id === activeDocId;
+                          return (
+                            <div
+                              key={doc.id}
+                              onClick={() => {
+                                setActiveDocId(doc.id);
+                                if (window.innerWidth < 768) setSidebarOpen(false);
+                              }}
+                              class={`
+                                group flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs cursor-pointer transition-all
+                                ${isActive 
+                                  ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-500 font-medium' 
+                                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-gray-200'}
+                              `}
+                            >
+                              <span class="truncate pr-2 flex-1">{doc.title}</span>
+                              <div class="opacity-0 group-hover:opacity-100 flex items-center gap-1">
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); handleRename(doc.id, false); }} 
+                                  class="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                                  title="重命名"
+                                >
+                                  <i data-lucide="edit-3" class="w-3 h-3"></i>
+                                </button>
+                                <button 
+                                  onClick={(e) => handleDeleteDoc(e, doc.id)} 
+                                  class="p-0.5 hover:bg-red-100 dark:hover:bg-red-900/40 rounded text-gray-400 hover:text-red-500"
+                                  title="删除文档"
+                                >
+                                  <i data-lucide="x" class="w-3 h-3"></i>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Sidebar Footer Stats */}
+              <div class="p-3 border-t border-gray-200 dark:border-darkborder text-[11px] text-gray-400 flex justify-between items-center bg-gray-100/50 dark:bg-gray-900/30">
+                <span>文档数: {docTree.reduce((acc, c) => acc + c.items.length, 0)}</span>
+                <button 
+                  onClick={() => {
+                    if (confirm('是否重置为默认演示文档？')) {
+                      setDocTree(INITIAL_DOC_TREE);
+                      setActiveDocId('doc-intro');
+                    }
+                  }}
+                  class="text-gray-500 hover:text-brand-500 underline"
+                >
+                  重置默认
+                </button>
+              </div>
+            </aside>
+
+            {/* MAIN CONTENT WORKSPACE AREA */}
+            <main class="flex-1 flex overflow-hidden bg-white dark:bg-darkbg relative">
+              {activeDoc ? (
+                <div class="flex-1 flex overflow-hidden">
+                  
+                  {/* EDITOR / SPLIT LEFT PANEL */}
+                  {(viewMode === 'edit' || viewMode === 'split') && (
+                    <div class={`flex flex-col border-r border-gray-200 dark:border-darkborder ${viewMode === 'split' ? 'w-1/2' : 'w-full'} h-full bg-gray-50/50 dark:bg-gray-900/40`}>
+                      {/* Editor Toolbar Header */}
+                      <div class="h-9 px-4 bg-gray-100 dark:bg-gray-800/80 border-b border-gray-200 dark:border-darkborder flex items-center justify-between text-xs text-gray-500">
+                        <span class="flex items-center gap-1.5 font-mono">
+                          <i data-lucide="file-code" class="w-3.5 h-3.5 text-brand-500"></i>
+                          Markdown 编辑区域
+                        </span>
+                        <span>{activeDoc.content.length} 字符</span>
+                      </div>
+
+                      {/* Textarea Editor */}
+                      <textarea
+                        value={activeDoc.content}
+                        onChange={(e) => updateDocContent(e.target.value)}
+                        placeholder="在此输入 Markdown 文档内容..."
+                        class="flex-1 p-4 bg-transparent resize-none font-mono text-sm leading-relaxed focus:outline-none text-gray-800 dark:text-gray-200 selection:bg-brand-500/20"
+                        spellCheck="false"
+                      ></textarea>
+                    </div>
+                  )}
+
+                  {/* PREVIEW / READ RIGHT PANEL */}
+                  {(viewMode === 'read' || viewMode === 'split') && (
+                    <div class={`flex-1 overflow-y-auto h-full p-6 md:p-10 flex ${viewMode === 'split' ? 'w-1/2' : 'w-full'}`}>
+                      <div class="flex-1 max-w-4xl mx-auto">
+                        
+                        {/* Doc Top Meta Bar */}
+                        <div class="mb-6 pb-4 border-b border-gray-100 dark:border-gray-800/60 flex items-center justify-between text-xs text-gray-400">
+                          <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 font-medium text-gray-600 dark:text-gray-300">
+                              VitePress Document
+                            </span>
+                            <span>•</span>
+                            <span>实时更新</span>
+                          </div>
+                          <button 
+                            onClick={() => copyToClipboard(activeDoc.content)}
+                            class="hover:text-brand-500 flex items-center gap-1 transition-colors"
+                          >
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            复制 MD 源码
+                          </button>
+                        </div>
+
+                        {/* Rendered HTML Container */}
+                        <div 
+                          class="vp-doc text-gray-800 dark:text-gray-200"
+                          dangerouslySetInnerHTML={{ __html: renderedHtml }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* RAW MARKDOWN CODE VIEW MODE */}
+                  {viewMode === 'raw' && (
+                    <div class="flex-1 h-full overflow-y-auto p-6 bg-gray-900 text-gray-100 font-mono text-sm">
+                      <div class="max-w-4xl mx-auto relative">
+                        <div class="absolute top-0 right-0">
+                          <button 
+                            onClick={() => copyToClipboard(activeDoc.content)}
+                            class="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-xs rounded border border-gray-700 flex items-center gap-1.5"
+                          >
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            复制代码
+                          </button>
+                        </div>
+                        <pre class="bg-transparent p-0 border-0">
+                          <code>{activeDoc.content}</code>
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* RIGHT SIDEBAR - TABLE OF CONTENTS (VitePress Outline) */}
+                  {(viewMode === 'read' || viewMode === 'split') && toc.length > 0 && (
+                    <div class="hidden xl:block w-56 p-6 border-l border-gray-200 dark:border-darkborder shrink-0 text-xs overflow-y-auto">
+                      <div class="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-1.5">
+                        <i data-lucide="align-left" class="w-3.5 h-3.5 text-brand-500"></i>
+                        <span>本页目录</span>
+                      </div>
+                      <nav class="space-y-2 border-l border-gray-200 dark:border-gray-800 pl-3">
+                        {toc.map((item, index) => (
+                          <a
+                            key={index}
+                            href={`#${item.id}`}
+                            class={`block text-gray-500 dark:text-gray-400 hover:text-brand-500 dark:hover:text-brand-500 truncate transition-colors ${
+                              item.level === 3 ? 'pl-3 text-[11px]' : 'font-medium'
+                            }`}
+                          >
+                            {item.text}
+                          </a>
+                        ))}
+                      </nav>
+                    </div>
+                  )}
+
+                </div>
+              ) : (
+                /* Empty state when no docs exist */
+                <div class="flex-1 flex flex-col items-center justify-center p-8 text-center text-gray-400">
+                  <i data-lucide="file-x" class="w-12 h-12 stroke-1 mb-3"></i>
+                  <p class="text-base font-medium">暂无打开的文档</p>
+                  <p class="text-xs mt-1">请在左侧目录选择或新建一个文档</p>
+                </div>
+              )}
+            </main>
+          </div>
+
+          {/* SEARCH MODAL */}
+          {isSearchOpen && (
+            <div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-start justify-center pt-20 p-4">
+              <div class="bg-white dark:bg-darkcard border border-gray-200 dark:border-darkborder rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
+                <div class="p-3 border-b border-gray-200 dark:border-darkborder flex items-center gap-2">
+                  <i data-lucide="search" class="w-4 h-4 text-gray-400"></i>
+                  <input
+                    type="text"
+                    placeholder="关键字搜索全文或标题..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    class="flex-1 bg-transparent border-0 text-sm focus:outline-none text-gray-800 dark:text-gray-200"
+                    autoFocus
+                  />
+                  <button onClick={() => setIsSearchOpen(false)} class="p-1 text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                  </button>
+                </div>
+
+                <div class="max-h-80 overflow-y-auto p-2">
+                  {searchResults.length > 0 ? (
+                    searchResults.map(result => (
+                      <div
+                        key={result.id}
+                        onClick={() => {
+                          setActiveDocId(result.id);
+                          setIsSearchOpen(false);
+                        }}
+                        class="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer transition-colors"
+                      >
+                        <div class="text-xs text-brand-500 font-medium mb-0.5">{result.category}</div>
+                        <div class="text-sm font-semibold text-gray-900 dark:text-gray-100">{result.title}</div>
+                        <div class="text-xs text-gray-400 line-clamp-1 mt-1 font-mono">
+                          {result.content.replace(/[#*`]/g, '')}
+                        </div>
+                      </div>
+                    ))
+                  ) : searchQuery ? (
+                    <div class="p-8 text-center text-xs text-gray-400">未找到相关匹配文档</div>
+                  ) : (
+                    <div class="p-8 text-center text-xs text-gray-400">请输入关键字搜索文档内容</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Render React App
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

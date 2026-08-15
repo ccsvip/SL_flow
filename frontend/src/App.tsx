@@ -21,6 +21,7 @@ import BackupsPage from "@/pages/BackupsPage";
 import PRDListPage from "@/pages/PRDListPage";
 import PRDDetailPage from "@/pages/PRDDetailPage";
 import APIKeysPage from "@/pages/APIKeysPage";
+import MemoPage from "@/pages/MemoPage";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { token, hydrated } = useAuthStore();
@@ -92,6 +93,7 @@ export default function App() {
           }
         />
         <Route path="audit-logs" element={<AuditLogsPage />} />
+        <Route path="memos" element={<MemoPage />} />
         <Route
           path="backups"
           element={
