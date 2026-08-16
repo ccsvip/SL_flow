@@ -61,6 +61,7 @@ function render(md: string): string {
   const out: string[] = [];
   let inCode = false;
   let codeLang = "";
+  let codeBuf: string[] = [];
   let listOpen: "" | "ul" | "ol" = "";
   let blockquoteOpen = false;
   let table: string[][] | null = null;
@@ -77,6 +78,24 @@ function render(md: string): string {
       blockquoteOpen = false;
     }
   };
+  const flushCode = () => {
+    const raw = codeBuf.join("\n");
+    const lang = escape(codeLang);
+    const mermaid = codeLang === "mermaid";
+    out.push(
+      `<div class="slf-md-code-wrap">` +
+        `<div class="slf-md-code-bar">` +
+        `<span class="slf-md-code-lang">${lang || "code"}</span>` +
+        `<button type="button" class="slf-md-copy" data-code="${encodeURIComponent(raw)}" aria-label="复制代码">复制</button>` +
+        `</div>` +
+        `<pre class="slf-md-code${mermaid ? " slf-md-mermaid" : ""}"><code data-lang="${lang}">${escape(raw)}</code></pre>` +
+        `</div>`,
+    );
+    inCode = false;
+    codeLang = "";
+    codeBuf = [];
+  };
+
   const flushTable = () => {
     if (!table || table.length < 2) {
       table = null;
@@ -106,27 +125,15 @@ function render(md: string): string {
       flushTable();
       if (!inCode) {
         codeLang = line.replace(/^```/, "").trim();
-        if (codeLang === "mermaid") {
-          // Render mermaid blocks as a labeled note rather than raw -
-          // we don't ship mermaid renderer to keep deps minimal.
-          out.push(
-            '<pre class="slf-md-code slf-md-mermaid"><code data-lang="mermaid">',
-          );
-        } else {
-          out.push(
-            `<pre class="slf-md-code"><code data-lang="${escape(codeLang)}">`,
-          );
-        }
         inCode = true;
+        codeBuf = [];
       } else {
-        out.push("</code></pre>");
-        inCode = false;
-        codeLang = "";
+        flushCode();
       }
       continue;
     }
     if (inCode) {
-      out.push(escape(line));
+      codeBuf.push(line);
       continue;
     }
 
@@ -210,18 +217,49 @@ function render(md: string): string {
   closeList();
   closeQuote();
   flushTable();
-  if (inCode) out.push("</code></pre>");
+  if (inCode) flushCode();
 
   return out.join("\n");
 }
 
 export default function MarkdownView({ markdown, className }: Props) {
   const html = React.useMemo(() => render(markdown || ""), [markdown]);
+
+  const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const btn = (e.target as HTMLElement).closest(".slf-md-copy");
+    if (!(btn instanceof HTMLButtonElement)) return;
+    const encoded = btn.getAttribute("data-code") || "";
+    let text = "";
+    try {
+      text = decodeURIComponent(encoded);
+    } catch {
+      text = encoded;
+    }
+    const restore = btn.textContent || "复制";
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        btn.textContent = "已复制";
+        btn.classList.add("is-copied");
+        window.setTimeout(() => {
+          btn.textContent = restore;
+          btn.classList.remove("is-copied");
+        }, 1500);
+      })
+      .catch(() => {
+        btn.textContent = "失败";
+        window.setTimeout(() => {
+          btn.textContent = restore;
+        }, 1500);
+      });
+  };
+
   return (
     <div
       className={`slf-md ${className || ""}`}
       // The renderer escapes every input fragment before composition.
       dangerouslySetInnerHTML={{ __html: html }}
+      onClick={onClick}
     />
   );
 }

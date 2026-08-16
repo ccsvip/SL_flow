@@ -17,6 +17,7 @@ import {
   EyeOutlined,
   FileTextOutlined,
   FolderOpenOutlined,
+  MenuOutlined,
   PushpinOutlined,
   PushpinFilled,
   PlusOutlined,
@@ -45,6 +46,7 @@ export default function MemoPage() {
   const [searchQ, setSearchQ] = React.useState("");
   const [activeMemoId, setActiveMemoId] = React.useState<number | null>(null);
   const [viewMode, setViewMode] = React.useState<ViewMode>("read");
+  const [readNavOpen, setReadNavOpen] = React.useState(false);
 
   // --- Editor local state (synced when active memo changes) --------------
   const [editTitle, setEditTitle] = React.useState("");
@@ -373,6 +375,26 @@ export default function MemoPage() {
         {/* Toolbar */}
         <div className="slf-memo-editor-toolbar">
           <div className="slf-memo-editor-toolbar-left">
+            {viewMode === "read" && (
+              <>
+                <Button
+                  size="small"
+                  type={readNavOpen ? "primary" : "text"}
+                  icon={<MenuOutlined />}
+                  onClick={() => setReadNavOpen((v) => !v)}
+                >
+                  笔记列表
+                </Button>
+                <Button
+                  size="small"
+                  type="text"
+                  icon={<PlusOutlined />}
+                  onClick={() => setCreateOpen(true)}
+                >
+                  新建
+                </Button>
+              </>
+            )}
             <Segmented
               size="small"
               value={viewMode}
@@ -471,7 +493,7 @@ export default function MemoPage() {
           {/* Preview pane */}
           {(viewMode === "read" || viewMode === "split") && (
             <div
-              className="slf-memo-editor-pane slf-memo-preview"
+              className={`slf-memo-editor-pane slf-memo-preview${viewMode === "read" ? " is-read" : ""}`}
               style={{ flex: viewMode === "split" ? "1 1 50%" : "1 1 100%" }}
             >
               <div className="slf-memo-preview-inner">
@@ -546,9 +568,9 @@ export default function MemoPage() {
   );
 
   return (
-    <div className="slf-memo-page">
-      {renderSidebar()}
-      {renderList()}
+    <div className={`slf-memo-page${viewMode === "read" ? " is-reading" : ""}`}>
+      {(viewMode !== "read" || readNavOpen) && renderSidebar()}
+      {(viewMode !== "read" || readNavOpen) && renderList()}
       {renderEditor()}
       {renderCreateModal()}
     </div>
